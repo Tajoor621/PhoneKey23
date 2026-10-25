@@ -1,0 +1,36 @@
+{
+  "url": "http://127.0.0.1:8080/",
+  "viewports": {
+    "desktop": {
+      "width": 1280,
+      "height": 800,
+      "status": 200,
+      "title": "PhoneKey",
+      "hasCanvas": false,
+      "bodyTextLen": 232,
+      "bodyTextHash": "137dafed2d21ea7eaa7b7dbf7074355cb8940b56aae41c96d68242bd0da5375c",
+      "bodyTextPrefix": "PhoneKey No ads. No subscription. Off 00:00 Tap to connect This ",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-preview.png"
+    },
+    "mobile": {
+      "width": 390,
+      "height": 844,
+      "status": 200,
+      "title": "PhoneKey",
+      "hasCanvas": false,
+      "bodyTextLen": 232,
+      "bodyTextHash": "137dafed2d21ea7eaa7b7dbf7074355cb8940b56aae41c96d68242bd0da5375c",
+      "bodyTextPrefix": "PhoneKey No ads. No subscription. Off 00:00 Tap to connect This ",
+      "horizontalOverflow": false,
+      "consoleErrors": [],
+      "pageErrors": [],
+      "screenshot": "/workspace/screenshots/app-builder-preview-mobile.png"
+    }
+  },
+  "brandWarnings": [],
+  "authWarnings": [],
+  "verdictFile": "/workspace/screenshots/app-builder-preview.json"
+}
