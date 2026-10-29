@@ -55,7 +55,7 @@ private val tabs = listOf(
 )
 
 @Composable
-fun PhoneKeyRoot(vm: PhoneKeyViewModel = viewModel()) {
+fun PhoneKeyRoot(connectTick: Int = 0, vm: PhoneKeyViewModel = viewModel()) {
     PhoneKeyTheme {
         val context = LocalContext.current
         val nav = rememberNavController()
@@ -96,6 +96,9 @@ fun PhoneKeyRoot(vm: PhoneKeyViewModel = viewModel()) {
 
         LaunchedEffect(Unit) {
             if (Build.VERSION.SDK_INT >= 33) notifications.launch(Manifest.permission.POST_NOTIFICATIONS)
+        }
+        LaunchedEffect(connectTick) {
+            if (connectTick > 0) connect()
         }
         LaunchedEffect(settings.autoConnectOnLaunch, settings.selectedProfileId) {
             if (askedLaunchConnect || !settings.autoConnectOnLaunch || settings.selectedProfileId == null) return@LaunchedEffect

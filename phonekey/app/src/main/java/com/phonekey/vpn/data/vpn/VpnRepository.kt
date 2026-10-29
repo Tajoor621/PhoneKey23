@@ -48,6 +48,9 @@ class VpnRepository(
         appScope.launch { connectSelectedAwait() }
     }
 
+    /** Used by the boot receiver so the process is not released before the tunnel service is up. */
+    suspend fun connectSelectedAndAwait() = connectSelectedAwait()
+
     fun disconnect() {
         appScope.launch { disconnectAwait() }
     }
@@ -215,7 +218,9 @@ class VpnRepository(
     }
 
     private fun startTunnelService() {
+        val token = PhoneKeyVpnService.armStart()
         val intent = Intent(context, PhoneKeyVpnService::class.java)
+            .putExtra(PhoneKeyVpnService.EXTRA_GENERATION, token)
         context.startForegroundService(intent)
     }
 

@@ -10,6 +10,8 @@ import com.phonekey.vpn.domain.model.VpnProfile
 import com.wireguard.android.backend.GoBackend
 import com.wireguard.android.backend.Tunnel
 import com.wireguard.config.Config
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import okhttp3.OkHttpClient
 import java.io.ByteArrayInputStream
 import java.net.InetAddress
@@ -64,36 +66,44 @@ class WireGuardEngine(
 ) : VpnEngine {
     override val protocol = Protocol.WIREGUARD
     private val backend by lazy { GoBackend(context.applicationContext) }
+
+    @Volatile
     private var active: NamedTunnel? = null
+
+    @Volatile
     private var activeProfileId: String? = null
 
     override suspend fun connect(profile: VpnProfile, options: EngineOptions) {
-        val text = ConfigTexts.withExcludedApplications(profile.rawConfig, options.excludedPackages)
-        val config = try {
-            Config.parse(ByteArrayInputStream(text.toByteArray(Charsets.UTF_8)))
-        } catch (error: Exception) {
-            throw IllegalArgumentException(
-                "WireGuard rejected this config: ${error.message ?: "invalid .conf"}",
-                error,
-            )
-        }
-        val tunnel = NamedTunnel(ConfigTexts.tunnelName(profile)) { state ->
-            if (state == Tunnel.State.DOWN) {
-                activeProfileId?.let(onTunnelDown)
+        withContext(Dispatchers.IO) {
+            val text = ConfigTexts.withExcludedApplications(profile.rawConfig, options.excludedPackages)
+            val config = try {
+                Config.parse(ByteArrayInputStream(text.toByteArray(Charsets.UTF_8)))
+            } catch (error: Exception) {
+                throw IllegalArgumentException(
+                    "WireGuard rejected this config: ${error.message ?: "invalid .conf"}",
+                    error,
+                )
             }
-        }
-        active = tunnel
-        activeProfileId = profile.id
-        val result = backend.setState(tunnel, Tunnel.State.UP, config)
-        if (result != Tunnel.State.UP) {
-            throw IllegalStateException("WireGuard stayed down.")
+            val tunnel = NamedTunnel(ConfigTexts.tunnelName(profile)) { state ->
+                if (state == Tunnel.State.DOWN) {
+                    activeProfileId?.let(onTunnelDown)
+                }
+            }
+            active = tunnel
+            activeProfileId = profile.id
+            val result = backend.setState(tunnel, Tunnel.State.UP, config)
+            if (result != Tunnel.State.UP) {
+                throw IllegalStateException("WireGuard stayed down.")
+            }
         }
     }
 
     override suspend fun disconnect() {
         val tunnel = active ?: return
         try {
-            backend.setState(tunnel, Tunnel.State.DOWN, null)
+            withContext(Dispatchers.IO) {
+                backend.setState(tunnel, Tunnel.State.DOWN, null)
+            }
         } finally {
             active = null
             activeProfileId = null

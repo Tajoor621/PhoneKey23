@@ -227,7 +227,7 @@ function HomeScreen({
         </p>
       )}
       <p className="mt-4 max-w-sm text-center text-sm text-muted">
-        This page stores configs here and does not route traffic. The Android app opens the real tunnel.
+        This page keeps configs on this device and does not route traffic. The Android app opens the real tunnel. The Studio project is under Settings.
       </p>
       <div className="mt-auto w-full pt-8">
         <button type="button" onClick={onChoose} className="w-full rounded-2xl bg-card p-4 text-left">

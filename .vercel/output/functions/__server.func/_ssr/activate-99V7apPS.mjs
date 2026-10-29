@@ -1,5 +1,5 @@
 import { x as require_jsx_runtime, y as Link } from "../_libs/@tanstack/react-router+[...].mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/activate-DXzNdwAc.js
+//#region node_modules/.nitro/vite/services/ssr/assets/activate-99V7apPS.js
 var import_jsx_runtime = require_jsx_runtime();
 function Activate() {
 	return /* @__PURE__ */ (0, import_jsx_runtime.jsxs)("main", {
@@ -7,11 +7,11 @@ function Activate() {
 		children: [
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("h1", {
 				className: "font-display text-4xl font-semibold",
-				children: "PhoneKey is free."
+				children: "PhoneKey is free. No ads. No subscriptions."
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 				className: "mt-4 text-lg leading-relaxed text-muted",
-				children: "No ads. No subscriptions. No accounts. Your WireGuard keys stay on this device."
+				children: "No accounts. Your WireGuard keys stay on this device."
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)(Link, {
 				to: "/",

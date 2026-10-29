@@ -17,7 +17,7 @@ class AppOnBootReceiver : BroadcastReceiver() {
             try {
                 val settings = app.container.settingsRepository.snapshot()
                 if (settings.autoConnectOnBoot && VpnService.prepare(app) == null) {
-                    app.container.vpnRepository.connectSelected()
+                    app.container.vpnRepository.connectSelectedAndAwait()
                 }
             } finally {
                 pending.finish()

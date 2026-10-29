@@ -209,8 +209,18 @@ PersistentKeepalive = 25
     }
 
     private fun endpointLooksValid(endpoint: String): Boolean {
-        val port = endpoint.substringAfterLast(':', "")
-        val host = endpoint.substringBeforeLast(':', "")
+        val trimmed = endpoint.trim()
+        val host: String
+        val port: String
+        if (trimmed.startsWith("[")) {
+            val end = trimmed.indexOf(']')
+            if (end < 1 || !trimmed.substring(end).startsWith("]:")) return false
+            host = trimmed.substring(1, end)
+            port = trimmed.substring(end + 2)
+        } else {
+            host = trimmed.substringBeforeLast(':', "")
+            port = trimmed.substringAfterLast(':', "")
+        }
         val portNumber = port.toIntOrNull() ?: return false
         return host.isNotBlank() && portNumber in 1..65535
     }

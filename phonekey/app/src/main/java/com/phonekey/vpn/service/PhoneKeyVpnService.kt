@@ -20,6 +20,7 @@ import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import java.util.Locale
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * Foreground [android.net.VpnService] that GoBackend actually drives.
@@ -31,6 +32,7 @@ import java.util.Locale
 class PhoneKeyVpnService : GoBackend.VpnService() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var latest: Session = Session()
+    private var boundGeneration = 0
 
     override fun onCreate() {
         super.onCreate()
@@ -40,6 +42,7 @@ class PhoneKeyVpnService : GoBackend.VpnService() {
         scope.launch {
             app.container.vpnRepository.session.collect { session ->
                 latest = session
+                if (boundGeneration != liveGeneration) return@collect
                 val manager = getSystemService(NOTIFICATION_SERVICE) as android.app.NotificationManager
                 manager.notify(NOTIFICATION_ID, buildNotification(session))
             }
@@ -47,8 +50,27 @@ class PhoneKeyVpnService : GoBackend.VpnService() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        val token = intent?.getIntExtra(EXTRA_GENERATION, NO_TOKEN) ?: NO_TOKEN
+        val startedByUs = token != NO_TOKEN && token == liveGeneration
+        if (token != NO_TOKEN) {
+            boundGeneration = token
+        } else if (boundGeneration == 0) {
+            boundGeneration = liveGeneration
+        }
+        if (token != NO_TOKEN && boundGeneration != liveGeneration) {
+            startForegroundCompat(buildNotification(latest))
+            stopQuietly()
+            return START_NOT_STICKY
+        }
+        // Parent completes GoBackend's service future. Its Always-on check looks for a
+        // component whose package is not ours. The system starts Always-on with our
+        // component set, so that check does not fire. A start without our generation
+        // token is Always-on or a restart after the process died.
         val result = super.onStartCommand(intent, flags, startId)
         startForegroundCompat(buildNotification(latest))
+        if (!startedByUs) {
+            (application as PhoneKeyApp).container.vpnRepository.onAlwaysOnTriggered()
+        }
         return result
     }
 
@@ -84,7 +106,14 @@ class PhoneKeyVpnService : GoBackend.VpnService() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
         val disconnect = actionPending(ACTION_DISCONNECT, 1)
-        val connect = actionPending(ACTION_CONNECT, 2)
+        val connect = PendingIntent.getActivity(
+            this,
+            2,
+            Intent(this, MainActivity::class.java)
+                .setAction(ACTION_CONNECT)
+                .addFlags(Intent.FLAG_ACTIVITY_SINGLE_TOP or Intent.FLAG_ACTIVITY_CLEAR_TOP),
+            PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
+        )
         val title = session.profileName ?: getString(R.string.app_name)
         val text = when (session.status) {
             TunnelStatus.CONNECTED -> buildString {
@@ -99,7 +128,7 @@ class PhoneKeyVpnService : GoBackend.VpnService() {
             TunnelStatus.ERROR -> session.message ?: getString(R.string.notif_disconnected)
             TunnelStatus.DISCONNECTED -> getString(R.string.notif_disconnected)
         }
-        return NotificationCompat.Builder(this, CHANNEL_ID)
+        val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_key)
             .setContentTitle(title)
             .setContentText(text)
@@ -108,9 +137,12 @@ class PhoneKeyVpnService : GoBackend.VpnService() {
             .setOnlyAlertOnce(true)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
-            .addAction(0, getString(R.string.action_connect), connect)
-            .addAction(0, getString(R.string.action_disconnect), disconnect)
-            .build()
+        if (session.status == TunnelStatus.CONNECTED || session.status == TunnelStatus.CONNECTING) {
+            builder.addAction(0, getString(R.string.action_disconnect), disconnect)
+        } else {
+            builder.addAction(0, getString(R.string.action_connect), connect)
+        }
+        return builder.build()
     }
 
     private fun actionPending(action: String, requestCode: Int): PendingIntent {
@@ -127,23 +159,44 @@ class PhoneKeyVpnService : GoBackend.VpnService() {
         const val CHANNEL_ID = "phonekey_vpn"
         const val ACTION_DISCONNECT = "com.phonekey.vpn.action.DISCONNECT"
         const val ACTION_CONNECT = "com.phonekey.vpn.action.CONNECT"
+        const val EXTRA_GENERATION = "generation"
+        private const val NO_TOKEN = -1
         private const val NOTIFICATION_ID = 42
         private const val READY_TIMEOUT_MS = 5_000L
+
+        private val generation = AtomicInteger(0)
+
+        @Volatile
+        private var liveGeneration = 0
 
         @Volatile
         private var instance: PhoneKeyVpnService? = null
 
-        suspend fun awaitReady(): Boolean {
-            val start = SystemClock.elapsedRealtime()
-            while (SystemClock.elapsedRealtime() - start < READY_TIMEOUT_MS) {
-                if (instance != null) return true
-                delay(20)
-            }
-            return instance != null
+        /** Call immediately before [android.content.Context.startForegroundService]. */
+        fun armStart(): Int {
+            val token = generation.incrementAndGet()
+            liveGeneration = token
+            return token
         }
 
         fun requestStop() {
-            instance?.stopQuietly()
+            liveGeneration = generation.incrementAndGet()
+            instance?.stopIfStale()
+        }
+
+        private fun PhoneKeyVpnService.stopIfStale() {
+            if (boundGeneration != liveGeneration) stopQuietly()
+        }
+
+        suspend fun awaitReady(): Boolean {
+            val start = SystemClock.elapsedRealtime()
+            while (SystemClock.elapsedRealtime() - start < READY_TIMEOUT_MS) {
+                val running = instance
+                if (running != null && running.boundGeneration == liveGeneration) return true
+                delay(20)
+            }
+            val running = instance
+            return running != null && running.boundGeneration == liveGeneration
         }
 
         private fun formatRate(bps: Double): String {

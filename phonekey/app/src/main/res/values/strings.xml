@@ -9,7 +9,7 @@
     <string name="notif_disconnected">Disconnected</string>
     <string name="action_disconnect">Disconnect</string>
     <string name="action_connect">Connect</string>
-    <string name="activate_title">PhoneKey is free.</string>
-    <string name="activate_body">No ads. No subscriptions. No accounts. Your WireGuard keys stay on this phone.</string>
+    <string name="activate_title">PhoneKey is free. No ads. No subscriptions.</string>
+    <string name="activate_body">No accounts. Your WireGuard keys stay on this phone.</string>
     <string name="activate_continue">Open PhoneKey</string>
 </resources>

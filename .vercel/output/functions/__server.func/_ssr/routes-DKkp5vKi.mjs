@@ -4,7 +4,7 @@ import { a as QrCode, c as Pencil, d as FileUp, f as Download, i as ScanLine, l 
 import { t as require_jsQR } from "../_libs/jsqr.mjs";
 import { t as require_lib } from "../_libs/qrcode.mjs";
 import { n as persist, r as create, t as createJSONStorage } from "../_libs/zustand.mjs";
-//#region node_modules/.nitro/vite/services/ssr/assets/routes-B32-mlOf.js
+//#region node_modules/.nitro/vite/services/ssr/assets/routes-DKkp5vKi.js
 var import_react = /* @__PURE__ */ __toESM(require_react());
 var import_jsx_runtime = require_jsx_runtime();
 var import_jsQR = /* @__PURE__ */ __toESM(require_jsQR());
@@ -665,7 +665,7 @@ function HomeScreen({ session, selected, onToggle, onChoose }) {
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsx)("p", {
 				className: "mt-4 max-w-sm text-center text-sm text-muted",
-				children: "This page stores configs here and does not route traffic. The Android app opens the real tunnel."
+				children: "This page keeps configs on this device and does not route traffic. The Android app opens the real tunnel. The Studio project is under Settings."
 			}),
 			/* @__PURE__ */ (0, import_jsx_runtime.jsxs)("div", {
 				className: "mt-auto w-full pt-8",

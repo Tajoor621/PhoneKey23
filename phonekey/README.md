@@ -8,8 +8,9 @@ Package: `com.phonekey.vpn`
 
 - Foreground `VpnService` (`PhoneKeyVpnService`) driven by the official WireGuard userspace tunnel (`com.wireguard.android:tunnel`).
 - Connection state on a `StateFlow`: Disconnected, Connecting, Connected, Error. The ongoing notification shows upload and download rate and a disconnect action.
-- Quick Settings tile (`QuickTileService`) toggles the selected profile.
+- Quick Settings tile (`QuickTileService`) toggles the selected profile. It is unavailable until a profile is selected.
 - Boot receiver (`AppOnBootReceiver`) connects after boot or an update when “Auto-connect on boot” is on and VPN permission was already granted.
+- Always-on VPN starts `PhoneKeyVpnService` without the in-app connect token. That path connects the selected profile. GoBackend’s own Always-on check misses current Android, which starts the service with this app’s component set.
 - Profiles: add, edit, delete, select. Import a `.conf`, Xray JSON, or SSTP text from a file, a QR code, or a form. Export a profile as a QR code (it contains the private key).
 - Deep links `phonekey://activate` and `https://phonekey.app/activate` open a welcome screen. No license check.
 - Settings: auto-connect on boot, auto-connect on launch, a reconnect-on-drop kill switch, and split tunneling by package name you type yourself.

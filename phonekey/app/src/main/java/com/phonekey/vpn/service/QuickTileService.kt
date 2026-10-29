@@ -13,6 +13,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.launch
 
 class QuickTileService : TileService() {
@@ -25,23 +26,30 @@ class QuickTileService : TileService() {
         val next = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
         scope = next
         next.launch {
-            app.container.vpnRepository.session.collect { session ->
-                val tile = qsTile ?: return@collect
-                tile.state = when (session.status) {
-                    TunnelStatus.CONNECTED, TunnelStatus.CONNECTING -> Tile.STATE_ACTIVE
-                    TunnelStatus.DISCONNECTED, TunnelStatus.ERROR -> Tile.STATE_INACTIVE
-                }
-                tile.label = "PhoneKey"
-                if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                    tile.subtitle = when (session.status) {
-                        TunnelStatus.CONNECTED -> session.profileName ?: "Connected"
-                        TunnelStatus.CONNECTING -> "Connecting"
-                        TunnelStatus.ERROR -> "Error"
-                        TunnelStatus.DISCONNECTED -> "Off"
+            combine(
+                app.container.vpnRepository.session,
+                app.container.settingsRepository.settings,
+            ) { session, settings -> session to settings.selectedProfileId }
+                .collect { (session, selectedId) ->
+                    val tile = qsTile ?: return@collect
+                    tile.state = when {
+                        selectedId == null -> Tile.STATE_UNAVAILABLE
+                        session.status == TunnelStatus.CONNECTED ||
+                            session.status == TunnelStatus.CONNECTING -> Tile.STATE_ACTIVE
+                        else -> Tile.STATE_INACTIVE
                     }
+                    tile.label = "PhoneKey"
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        tile.subtitle = when {
+                            selectedId == null -> "No profile"
+                            session.status == TunnelStatus.CONNECTED -> session.profileName ?: "Connected"
+                            session.status == TunnelStatus.CONNECTING -> "Connecting"
+                            session.status == TunnelStatus.ERROR -> "Error"
+                            else -> "Off"
+                        }
+                    }
+                    tile.updateTile()
                 }
-                tile.updateTile()
-            }
         }
     }
 
@@ -59,13 +67,21 @@ class QuickTileService : TileService() {
             app.container.vpnRepository.disconnect()
             return
         }
-        val prepare = VpnService.prepare(this)
-        if (prepare != null) {
-            prepare.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
-            collapse(prepare)
-            return
+        // Listening scope is cancelled as soon as the panel closes. Keep this on the app scope.
+        app.container.appScope.launch(Dispatchers.Main.immediate) {
+            val selected = app.container.settingsRepository.snapshot().selectedProfileId
+            if (selected == null) {
+                openApp()
+                return@launch
+            }
+            val prepare = VpnService.prepare(this@QuickTileService)
+            if (prepare != null) {
+                prepare.addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
+                collapse(prepare)
+                return@launch
+            }
+            app.container.vpnRepository.connectSelected()
         }
-        app.container.vpnRepository.connectSelected()
     }
 
     private fun collapse(intent: Intent) {
@@ -83,7 +99,6 @@ class QuickTileService : TileService() {
         }
     }
 
-    @Suppress("unused")
     private fun openApp() {
         collapse(Intent(this, MainActivity::class.java).addFlags(Intent.FLAG_ACTIVITY_NEW_TASK))
     }
