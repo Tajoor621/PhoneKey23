@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>PhoneKey</title>
+  <meta name="description" content="PhoneKey is a free WireGuard client for Android. No ads. No subscriptions. No tracking." />
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560;9..144,620&family=Outfit:wght@400;500;600&display=swap" rel="stylesheet" />
+  <style>
+    :root {
+      color-scheme: dark;
+      --canvas: #10140f;
+      --card: #1c241a;
+      --fg: #f3f0e7;
+      --muted: #a8ad9f;
+      --line: #3a4336;
+      --brass: #e0b15a;
+      --ink: #1a1408;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      background: var(--canvas);
+      color: var(--fg);
+      font-family: Outfit, ui-sans-serif, system-ui, sans-serif;
+      line-height: 1.5;
+    }
+    main { max-width: 40rem; margin: 0 auto; padding: 3rem 1.25rem 4rem; }
+    h1, h2 { font-family: Fraunces, ui-serif, Georgia, serif; font-weight: 560; letter-spacing: -0.02em; }
+    h1 { font-size: 3rem; line-height: 1.05; margin: 0 0 0.75rem; }
+    h2 { font-size: 1.5rem; margin: 2.5rem 0 0.75rem; }
+    p, li { color: var(--muted); }
+    a { color: var(--brass); }
+    .lead { font-size: 1.125rem; }
+    .row { display: flex; flex-wrap: wrap; gap: 0.75rem; margin-top: 1.5rem; }
+    .btn {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-height: 3rem;
+      padding: 0 1.1rem;
+      border-radius: 1rem;
+      background: var(--brass);
+      color: var(--ink);
+      font-weight: 600;
+      text-decoration: none;
+    }
+    .btn.ghost { background: transparent; color: var(--fg); border: 1px solid var(--line); }
+    table { width: 100%; border-collapse: collapse; margin-top: 0.5rem; }
+    th, td { text-align: left; padding: 0.6rem 0; border-bottom: 1px solid var(--line); vertical-align: top; }
+    th { color: var(--fg); font-weight: 600; }
+    code { color: var(--fg); }
+  </style>
+</head>
+<body>
+  <main>
+    <p>Free · private · no account</p>
+    <h1>PhoneKey</h1>
+    <p class="lead">A WireGuard client for Android. No ads, no subscription, and no tracking. You bring your own server. PhoneKey does not ship one.</p>
+    <div class="row">
+      <a class="btn" href="https://github.com/Tajoor621/PhoneKey23/raw/main/public/phonekey-source.zip">Download the Android project</a>
+      <a class="btn ghost" href="https://github.com/Tajoor621/PhoneKey23/releases/latest">Latest release</a>
+    </div>
+    <h2>What works</h2>
+    <table>
+      <thead><tr><th>Protocol</th><th>Status</th></tr></thead>
+      <tbody>
+        <tr><td>WireGuard</td><td>Working, via the official tunnel library.</td></tr>
+        <tr><td>Xray / V2Ray</td><td>Not implemented. The app refuses these configs.</td></tr>
+        <tr><td>SSTP</td><td>Not implemented. The app refuses these configs.</td></tr>
+      </tbody>
+    </table>
+    <h2>Open it</h2>
+    <p>Unzip the project and open the <code>phonekey</code> folder in Android Studio Ladybug or newer, with JDK 17. <code>minSdk</code> is 26. A debug APK is also attached to <a href="https://github.com/Tajoor621/PhoneKey23/releases/latest">GitHub Releases</a> after the first tagged build.</p>
+    <p>Addresses such as <code>203.0.113.1</code> are documentation space. PhoneKey will not save or connect them.</p>
+    <h2>Kill switch</h2>
+    <p>The in-app switch reconnects a few times and can hold a tunnel that drops traffic while the app process is alive. For a block that survives a reboot, set PhoneKey as Always-on VPN and turn on “Block connections without VPN” in system VPN settings. The app has a button that opens that screen.</p>
+    <h2>Policy</h2>
+    <p>No ads. No billing. No analytics. No accounts. Camera access is asked only when you scan a QR code. WireGuard configs are encrypted with the Android Keystore before they are written to disk.</p>
+    <p><a href="https://github.com/Tajoor621/PhoneKey23">Source</a> · <a href="activate/">Activate</a> · <a href="https://github.com/Tajoor621/PhoneKey23/blob/main/LICENSE">Apache 2.0</a></p>
+  </main>
+</body>
+</html>
