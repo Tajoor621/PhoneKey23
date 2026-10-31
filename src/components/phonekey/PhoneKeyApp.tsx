@@ -21,6 +21,7 @@ import {
   formatBytes,
   formatDuration,
   formatRate,
+  implemented,
   protocolLabel,
   type VpnProfile,
   type WireGuardFields,
@@ -82,7 +83,16 @@ export function PhoneKeyApp() {
           <ProfilesScreen
             profiles={profiles}
             selectedId={settings.selectedProfileId}
-            onSelect={(id) => usePhoneKey.getState().select(id)}
+            onSelect={(id) => {
+              const profile = profiles.find((item) => item.id === id);
+              if (profile && !implemented(profile.protocol)) {
+                usePhoneKey.setState({
+                  banner: "Xray and SSTP are not implemented. Only a WireGuard profile can be selected.",
+                });
+                return;
+              }
+              usePhoneKey.getState().select(id);
+            }}
             onEdit={(id) => {
               setEditId(id);
               setView("edit");
@@ -283,7 +293,7 @@ function ProfilesScreen({
       <div className="flex flex-1 flex-col justify-center px-6 py-10">
         <h2 className="font-display text-3xl font-semibold">No profiles yet</h2>
         <p className="mt-3 text-base leading-relaxed text-muted">
-          Add a WireGuard config from a file, a QR code, or by typing the keys. Xray and SSTP can be stored, but those engines are not bundled.
+          Add a WireGuard config from a file, a QR code, or by typing the keys. PhoneKey does not ship a server, and it does not connect Xray or SSTP.
         </p>
       </div>
     );
@@ -296,7 +306,10 @@ function ProfilesScreen({
           <li key={profile.id}>
             <div className={`rounded-2xl p-4 ${selected ? "bg-brass-soft" : "bg-card"}`}>
               <button type="button" onClick={() => onSelect(profile.id)} className="w-full text-left">
-                <span className="block text-xs font-medium text-muted">{protocolLabel(profile.protocol)}</span>
+                <span className="block text-xs font-medium text-muted">
+                  {protocolLabel(profile.protocol)}
+                  {!implemented(profile.protocol) ? " · Not implemented" : ""}
+                </span>
                 <span className="mt-1 flex items-center justify-between gap-3">
                   <span className="font-semibold">{profile.name}</span>
                   {selected && <span className="text-sm font-semibold text-brass">In use</span>}
@@ -353,17 +366,10 @@ function AddScreen({ onBack, onScan, onSaved }: { onBack: () => void; onScan: ()
           <Choice label="Import a file" icon={<FileUp className="size-5" />} onClick={() => fileRef.current?.click()} />
           <Choice label="Scan a QR code" icon={<ScanLine className="size-5" />} onClick={onScan} />
           <Choice label="WireGuard form" icon={<KeyRound className="size-5" />} onClick={() => setMode("manual")} />
-          <Choice label="Paste config" icon={<Plus className="size-5" />} onClick={() => setMode("paste")} />
-          <button
-            type="button"
-            onClick={() => {
-              if (usePhoneKey.getState().loadExample()) onSaved();
-            }}
-            className="h-12 rounded-2xl border border-line font-semibold"
-          >
-            Load the example config
-          </button>
-          <p className="text-sm text-muted">The example uses documentation IP 203.0.113.1. It will not open a real tunnel.</p>
+          <Choice label="Paste WireGuard config" icon={<Plus className="size-5" />} onClick={() => setMode("paste")} />
+          <p className="text-sm text-muted">
+            PhoneKey has no bundled server. Documentation addresses such as 203.0.113.1 are refused. Xray and SSTP are not implemented.
+          </p>
           <input
             ref={fileRef}
             type="file"
@@ -418,7 +424,7 @@ function AddScreen({ onBack, onScan, onSaved }: { onBack: () => void; onScan: ()
         >
           <Field label="Name (optional)" value={name} onChange={setName} />
           <label className="block">
-            <span className="mb-1 block text-sm text-muted">WireGuard, Xray JSON, or SSTP</span>
+            <span className="mb-1 block text-sm text-muted">WireGuard .conf</span>
             <textarea
               value={raw}
               onChange={(event) => setRaw(event.target.value)}
@@ -433,8 +439,9 @@ function AddScreen({ onBack, onScan, onSaved }: { onBack: () => void; onScan: ()
             className="text-sm font-semibold text-brass"
             onClick={() => setRaw(EXAMPLE_WIREGUARD.trim())}
           >
-            Fill with the example
+            Show a refused sample
           </button>
+          <p className="text-sm text-muted">That sample uses 203.0.113.1. Import will refuse it. Replace the endpoint with your own server before saving.</p>
         </form>
       )}
     </div>
@@ -504,21 +511,27 @@ function SettingsScreen({ settings }: { settings: AppSettings }) {
         />
         <Toggle
           title="Kill switch"
-          body="If the tunnel drops, the Android app tries to reconnect. This is not a hard block. Android can still leak during the gap."
+          body="On Android, a drop reconnects a few times and can hold a tunnel that forwards nothing. That block ends if the process dies. This page does not route traffic."
           checked={settings.killSwitch}
           onChecked={(value) => update({ killSwitch: value })}
         />
         <p className="text-sm text-muted">
-          For a real block, set PhoneKey as Always-on VPN and enable “Block connections without VPN”.
+          For a block that survives a reboot, the Android app’s Settings opens system VPN settings. Set PhoneKey as Always-on VPN and enable “Block connections without VPN”.
         </p>
         <Toggle
           title="Split tunneling"
-          body="Packages below are written as ExcludedApplications on the WireGuard interface. Type them yourself. The app does not scan installed apps."
+          body="On Android, pick installed apps or type package names. Off means nothing is filtered. The web page only stores the list."
           checked={settings.splitTunnelEnabled}
           onChecked={(value) => update({ splitTunnelEnabled: value })}
         />
+        <Toggle
+          title="Only selected apps use the VPN"
+          body="Off: selected packages bypass the tunnel. On: only those packages use it."
+          checked={settings.splitIncludeOnly}
+          onChecked={(value) => update({ splitIncludeOnly: value })}
+        />
         <label className="block">
-          <span className="mb-1 block text-sm text-muted">Excluded packages</span>
+          <span className="mb-1 block text-sm text-muted">Packages, one per line</span>
           <textarea
             value={packages}
             onFocus={() => setFocused(true)}
@@ -537,9 +550,34 @@ function SettingsScreen({ settings }: { settings: AppSettings }) {
           />
         </label>
       </div>
+      <h3 className="mt-8 font-semibold">Profiles file</h3>
+      <p className="mt-2 text-sm leading-relaxed text-muted">
+        Export is JSON and includes private keys. On Android the same list is encrypted with the keystore before it is written to disk.
+      </p>
+      <button
+        type="button"
+        onClick={() => downloadText("phonekey-profiles.json", usePhoneKey.getState().exportBundle())}
+        className="mt-3 flex h-12 w-full items-center justify-center rounded-2xl border border-line font-semibold"
+      >
+        Export all profiles
+      </button>
+      <label className="mt-3 flex h-12 cursor-pointer items-center justify-center rounded-2xl border border-line font-semibold">
+        Import profile list
+        <input
+          type="file"
+          accept="application/json,.json"
+          className="sr-only"
+          onChange={(event) => {
+            const file = event.target.files?.[0];
+            event.target.value = "";
+            if (!file) return;
+            void file.text().then((text) => usePhoneKey.getState().importBundle(text));
+          }}
+        />
+      </label>
       <h3 className="mt-8 font-semibold">About</h3>
       <p className="mt-2 text-sm leading-relaxed text-muted">
-        PhoneKey is free. No ads. No subscriptions. No accounts. No analytics. Keys stay on your device.
+        PhoneKey is free. No ads. No subscriptions. No accounts. No analytics. WireGuard is the only working protocol. Xray and SSTP are not implemented.
       </p>
       <a
         href="/phonekey-source.zip"
@@ -549,8 +587,24 @@ function SettingsScreen({ settings }: { settings: AppSettings }) {
         <Download className="size-5" aria-hidden="true" />
         Download the Android project
       </a>
+      <a
+        href="https://github.com/Tajoor621/PhoneKey23/releases/latest"
+        className="mt-3 flex h-12 items-center justify-center rounded-2xl border border-line font-semibold"
+      >
+        Latest GitHub release
+      </a>
     </div>
   );
+}
+
+function downloadText(name: string, text: string) {
+  const blob = new Blob([text], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = name;
+  anchor.click();
+  URL.revokeObjectURL(url);
 }
 
 function Toggle({
@@ -748,7 +802,7 @@ function QrScanner({ onClose, onText }: { onClose: () => void; onText: (text: st
   return (
     <div className="flex flex-1 flex-col px-5 py-4">
       <ScreenHead title="Scan" onBack={onClose} />
-      <p className="mb-3 text-sm text-muted">Point the camera at a WireGuard or Xray QR code. Nothing is uploaded.</p>
+      <p className="mb-3 text-sm text-muted">Point the camera at a WireGuard QR code. Nothing is uploaded.</p>
       {error ? (
         <p className="text-sm text-clay" role="alert">{error}</p>
       ) : (

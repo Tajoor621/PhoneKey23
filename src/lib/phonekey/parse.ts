@@ -56,8 +56,48 @@ const PROTOCOL_LABEL: Record<Protocol, string> = {
   SSTP: "SSTP",
 };
 
+export function isDocumentationEndpoint(endpoint: string | null | undefined): boolean {
+  if (!endpoint?.trim()) return false;
+  let host = endpoint.trim();
+  if (host.startsWith("[")) {
+    const end = host.indexOf("]");
+    host = end > 1 ? host.slice(1, end) : host;
+  } else {
+    const colon = host.lastIndexOf(":");
+    if (colon > 0) host = host.slice(0, colon);
+  }
+  host = host.toLowerCase();
+  if (
+    host === "localhost" ||
+    host === "example" ||
+    host.endsWith(".example") ||
+    host.endsWith(".invalid") ||
+    host.endsWith(".test") ||
+    host === "example.com" ||
+    host.endsWith(".example.com") ||
+    host === "example.net" ||
+    host.endsWith(".example.net") ||
+    host === "example.org" ||
+    host.endsWith(".example.org")
+  ) {
+    return true;
+  }
+  const parts = host.split(".");
+  if (parts.length !== 4 || parts.some((part) => !/^\d+$/.test(part) || Number(part) > 255)) return false;
+  const [a, b, c] = parts.map(Number);
+  return (a === 192 && b === 0 && c === 2) || (a === 198 && b === 51 && c === 100) || (a === 203 && b === 0 && c === 113);
+}
+
+const DOCS_ENDPOINT =
+  "This endpoint is a documentation address, not a server. PhoneKey will not save or connect it. Use your own WireGuard endpoint.";
+const NOT_IMPLEMENTED = "Xray and SSTP are not implemented. Only a WireGuard profile can be saved.";
+
 export function protocolLabel(protocol: Protocol): string {
   return PROTOCOL_LABEL[protocol];
+}
+
+export function implemented(protocol: Protocol): boolean {
+  return protocol === "WIREGUARD";
 }
 
 export function isPlausibleKey(value: string): boolean {
@@ -83,6 +123,7 @@ export function generateWireGuard(name: string, fields: WireGuardFields): VpnPro
   if (!isPlausibleKey(publicKey)) throw new Error("Peer public key must be a 32-byte WireGuard key.");
   if (!allowed) throw new Error("Allowed IPs are required.");
   if (endpoint && !endpointLooksValid(endpoint)) throw new Error("Endpoint should look like host:51820.");
+  if (endpoint && isDocumentationEndpoint(endpoint)) throw new Error(DOCS_ENDPOINT);
   if (fields.presharedKey.trim() && !isPlausibleKey(fields.presharedKey)) {
     throw new Error("Preshared key must be a 32-byte key, or left empty.");
   }
@@ -107,10 +148,12 @@ export function importConfig(text: string, suggestedName?: string | null): VpnPr
   const raw = text.trim().replace(/^\uFEFF/, "");
   if (!raw) throw new Error("That file was empty.");
   if (new TextEncoder().encode(raw).length > MAX_BYTES) throw new Error("Config is larger than 1 MB.");
-  if (raw.startsWith("{")) return importXray(raw, suggestedName);
+  if (raw.startsWith("{")) {
+    throw new Error(NOT_IMPLEMENTED);
+  }
   if (/\[Interface\]/i.test(raw)) return importWireGuard(raw, suggestedName);
-  if (isSstp(raw)) return importSstp(raw, suggestedName);
-  throw new Error("Unrecognized config. Use a WireGuard .conf, Xray JSON, or an SSTP profile.");
+  if (isSstp(raw)) throw new Error(NOT_IMPLEMENTED);
+  throw new Error("Unrecognized config. Paste a WireGuard .conf.");
 }
 
 function importWireGuard(raw: string, suggestedName?: string | null): VpnProfile {
@@ -128,6 +171,7 @@ function importWireGuard(raw: string, suggestedName?: string | null): VpnProfile
   if (!address.trim()) throw new Error("Interface address is missing.");
   if (!isPlausibleKey(publicKey)) throw new Error("Peer public key is missing or not a WireGuard key.");
   if (!allowed.trim()) throw new Error("Peer AllowedIPs is missing.");
+  if (endpoint && isDocumentationEndpoint(endpoint)) throw new Error(DOCS_ENDPOINT);
   const host = endpoint?.split(":")[0]?.trim();
   const name = cleanName(suggestedName) ?? (host || "WireGuard");
   return makeProfile({
@@ -136,41 +180,6 @@ function importWireGuard(raw: string, suggestedName?: string | null): VpnProfile
     rawConfig: `${raw.trim()}\n`,
     endpoint,
     address,
-  });
-}
-
-function importXray(raw: string, suggestedName?: string | null): VpnProfile {
-  let root: Record<string, unknown>;
-  try {
-    const parsed: unknown = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object" || Array.isArray(parsed)) {
-      throw new Error("not an object");
-    }
-    root = parsed as Record<string, unknown>;
-  } catch {
-    throw new Error("Xray config is not valid JSON.");
-  }
-  const looksLikeXray = "outbounds" in root || "inbounds" in root || "protocol" in root;
-  if (!looksLikeXray) throw new Error("JSON has no Xray outbounds, inbounds, or protocol.");
-  const remarks = typeof root.remarks === "string" ? root.remarks : null;
-  const name = cleanName(suggestedName) ?? (remarks?.trim() || "Xray");
-  return makeProfile({
-    name,
-    protocol: "XRAY",
-    rawConfig: `${raw.trim()}\n`,
-    endpoint: null,
-    address: null,
-  });
-}
-
-function importSstp(raw: string, suggestedName?: string | null): VpnProfile {
-  const endpoint = raw.match(/sstp:\/\/\S+/i)?.[0] ?? null;
-  return makeProfile({
-    name: cleanName(suggestedName) ?? "SSTP",
-    protocol: "SSTP",
-    rawConfig: `${raw.trim()}\n`,
-    endpoint,
-    address: null,
   });
 }
 

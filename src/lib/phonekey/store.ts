@@ -1,9 +1,10 @@
 import { create } from "zustand";
 import { createJSONStorage, persist } from "zustand/middleware";
 import {
-  EXAMPLE_WIREGUARD,
   generateWireGuard,
+  implemented,
   importConfig,
+  isDocumentationEndpoint,
   type Protocol,
   type VpnProfile,
   type WireGuardFields,
@@ -16,6 +17,7 @@ export interface AppSettings {
   autoConnectOnLaunch: boolean;
   killSwitch: boolean;
   splitTunnelEnabled: boolean;
+  splitIncludeOnly: boolean;
   splitTunnelPackages: string[];
   selectedProfileId: string | null;
 }
@@ -44,16 +46,15 @@ interface PhoneKeyState {
   importText: (text: string, suggestedName?: string | null) => boolean;
   saveManual: (name: string, fields: WireGuardFields) => boolean;
   saveRaw: (id: string | null, name: string, raw: string) => boolean;
-  loadExample: () => boolean;
+  exportBundle: () => string;
+  importBundle: (text: string) => boolean;
   connectSelected: () => void;
   disconnect: () => void;
   dismissBanner: () => void;
 }
 
-const XRAY_MESSAGE =
-  "Xray/V2Ray is not bundled. The JSON stays on this device. A maintained open-source core is not wired in yet.";
-const SSTP_MESSAGE =
-  "SSTP is not bundled. The profile stays on this device. A maintained open-source client is not wired in yet.";
+const NOT_IMPLEMENTED =
+  "Xray and SSTP are not implemented. Only WireGuard can connect.";
 
 function emptySession(): Session {
   return {
@@ -76,6 +77,7 @@ function defaultSettings(): AppSettings {
     autoConnectOnLaunch: false,
     killSwitch: false,
     splitTunnelEnabled: false,
+    splitIncludeOnly: false,
     splitTunnelPackages: [],
     selectedProfileId: null,
   };
@@ -212,12 +214,29 @@ export const usePhoneKey = create<PhoneKeyState>()(
             return false;
           }
         },
-        loadExample: () => {
+        exportBundle: () =>
+          JSON.stringify({ phonekey: 1, profiles: get().profiles }, null, 2),
+        importBundle: (text: string) => {
           try {
-            remember(importConfig(EXAMPLE_WIREGUARD, "Example"));
+            const parsed: unknown = JSON.parse(text);
+            const root = parsed as { phonekey?: number; profiles?: VpnProfile[] };
+            if (root.phonekey !== 1 || !Array.isArray(root.profiles)) {
+              throw new Error("That file is not a PhoneKey profile export.");
+            }
+            const accepted: VpnProfile[] = [];
+            for (const item of root.profiles) {
+              if (!item?.rawConfig) continue;
+              accepted.push(importConfig(item.rawConfig, item.name));
+            }
+            if (accepted.length === 0) throw new Error("Nothing in that file could be imported.");
+            set((state) => ({
+              profiles: [...accepted, ...state.profiles.filter((profile) => !accepted.some((item) => item.name === profile.name && item.rawConfig === profile.rawConfig))],
+              settings: { ...state.settings, selectedProfileId: accepted[0]?.id ?? state.settings.selectedProfileId },
+            }));
+            note(`Imported ${accepted.length} profile${accepted.length === 1 ? "" : "s"}.`);
             return true;
           } catch (error) {
-            note(error instanceof Error ? error.message : "Could not load the example.");
+            note(error instanceof Error ? error.message : "Could not import that file.");
             return false;
           }
         },
@@ -235,7 +254,10 @@ export const usePhoneKey = create<PhoneKeyState>()(
             note("Choose a profile first.");
             return;
           }
-          if (profile.protocol === "XRAY") {
+          if (!implemented(profile.protocol) || isDocumentationEndpoint(profile.endpoint)) {
+            const message = !implemented(profile.protocol)
+              ? NOT_IMPLEMENTED
+              : "This endpoint is a documentation address, not a server.";
             set({
               session: {
                 ...emptySession(),
@@ -243,22 +265,10 @@ export const usePhoneKey = create<PhoneKeyState>()(
                 profileId: profile.id,
                 profileName: profile.name,
                 protocol: profile.protocol,
-                message: XRAY_MESSAGE,
+                message,
               },
             });
-            return;
-          }
-          if (profile.protocol === "SSTP") {
-            set({
-              session: {
-                ...emptySession(),
-                status: "ERROR",
-                profileId: profile.id,
-                profileName: profile.name,
-                protocol: profile.protocol,
-                message: SSTP_MESSAGE,
-              },
-            });
+            note(message);
             return;
           }
           clearConnectTimer();
@@ -275,9 +285,7 @@ export const usePhoneKey = create<PhoneKeyState>()(
             const latest = get();
             if (latest.session.status !== "CONNECTING" || latest.session.profileId !== profile.id) return;
             const excluded = latest.settings.splitTunnelEnabled ? latest.settings.splitTunnelPackages.length : 0;
-            const docs = profile.endpoint?.includes("203.0.113.1");
-            const parts: string[] = [];
-            if (docs) parts.push("203.0.113.1 is documentation space, so a phone would not finish this handshake.");
+            const parts: string[] = ["This page does not route traffic. Speeds here are simulated."];
             if (excluded > 0) {
               parts.push(
                 `On Android this profile would exclude ${excluded} package${excluded === 1 ? "" : "s"}.`,
@@ -310,6 +318,16 @@ export const usePhoneKey = create<PhoneKeyState>()(
       skipHydration: true,
       storage: createJSONStorage(() => (typeof window === "undefined" ? memoryStorage : localStorage)),
       partialize: (state) => ({ profiles: state.profiles, settings: state.settings }),
+      merge: (persisted, current) => {
+        const saved = (persisted ?? {}) as Partial<PhoneKeyState>;
+        return {
+          ...current,
+          ...saved,
+          settings: { ...defaultSettings(), ...(saved.settings ?? {}) },
+          session: emptySession(),
+          banner: null,
+        };
+      },
     },
   ),
 );
