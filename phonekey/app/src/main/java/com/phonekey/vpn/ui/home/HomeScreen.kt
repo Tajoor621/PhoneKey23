@@ -83,6 +83,18 @@ fun HomeScreen(
             if (session.status == TunnelStatus.CONNECTED) formatDuration(session.sinceEpochMs, now) else "00:00",
             style = MaterialTheme.typography.displaySmall,
         )
+        if (session.status == TunnelStatus.CONNECTED) {
+            Spacer(Modifier.height(8.dp))
+            Text(
+                "${formatRate(session.rxSpeedBps)} down",
+                style = MaterialTheme.typography.headlineSmall,
+            )
+            Text(
+                "${formatRate(session.txSpeedBps)} up",
+                style = MaterialTheme.typography.titleLarge,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         Spacer(Modifier.height(28.dp))
         Box(
             modifier = Modifier

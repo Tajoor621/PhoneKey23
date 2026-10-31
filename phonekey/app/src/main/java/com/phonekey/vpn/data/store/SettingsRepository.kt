@@ -9,6 +9,7 @@ import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import com.phonekey.vpn.domain.model.AppSettings
+import com.phonekey.vpn.domain.model.SettingsCodec
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
@@ -28,13 +29,14 @@ class SettingsRepository(context: Context) {
         }
     }
 
-    private fun Preferences.toSettings(): AppSettings = AppSettings(
-        autoConnectOnBoot = this[Keys.BOOT] ?: false,
-        autoConnectOnLaunch = this[Keys.LAUNCH] ?: false,
-        killSwitch = this[Keys.KILL] ?: false,
-        splitTunnelEnabled = this[Keys.SPLIT] ?: false,
-        splitTunnelPackages = (this[Keys.PACKAGES] ?: emptySet()).toList().sorted(),
-        selectedProfileId = this[Keys.SELECTED],
+    private fun Preferences.toSettings(): AppSettings = SettingsCodec.decode(
+        boot = this[Keys.BOOT],
+        launch = this[Keys.LAUNCH],
+        kill = this[Keys.KILL],
+        split = this[Keys.SPLIT],
+        includeOnly = this[Keys.INCLUDE],
+        packages = this[Keys.PACKAGES],
+        selected = this[Keys.SELECTED],
     )
 
     private fun MutablePreferences.write(settings: AppSettings) {
@@ -42,7 +44,8 @@ class SettingsRepository(context: Context) {
         this[Keys.LAUNCH] = settings.autoConnectOnLaunch
         this[Keys.KILL] = settings.killSwitch
         this[Keys.SPLIT] = settings.splitTunnelEnabled
-        this[Keys.PACKAGES] = settings.splitTunnelPackages.map { it.trim() }.filter { it.isNotEmpty() }.toSet()
+        this[Keys.INCLUDE] = settings.splitIncludeOnly
+        this[Keys.PACKAGES] = SettingsCodec.packageSet(settings)
         val selected = settings.selectedProfileId
         if (selected == null) remove(Keys.SELECTED) else this[Keys.SELECTED] = selected
     }
@@ -52,6 +55,7 @@ class SettingsRepository(context: Context) {
         val LAUNCH = booleanPreferencesKey("auto_connect_launch")
         val KILL = booleanPreferencesKey("kill_switch")
         val SPLIT = booleanPreferencesKey("split_enabled")
+        val INCLUDE = booleanPreferencesKey("split_include_only")
         val PACKAGES = stringSetPreferencesKey("split_packages")
         val SELECTED = stringPreferencesKey("selected_profile")
     }

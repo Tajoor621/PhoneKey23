@@ -1,6 +1,5 @@
 package com.phonekey.vpn.data.parser
 
-import com.google.gson.JsonParser
 import com.phonekey.vpn.domain.model.Protocol
 import com.phonekey.vpn.domain.model.VpnProfile
 import java.util.Base64
@@ -19,20 +18,6 @@ data class WireGuardFields(
 
 object ConfigTexts {
     const val MAX_BYTES = 1_000_000
-
-    const val EXAMPLE_WIREGUARD = """
-[Interface]
-# Example only. 203.0.113.1 is documentation space, not a PhoneKey server.
-PrivateKey = yAnz5TF+lXXJte14tji3zlMNq+hd2rYUIgJBgB3fBmk=
-Address = 10.0.0.2/32
-DNS = 1.1.1.1
-
-[Peer]
-PublicKey = HIgo9xNzJMWLKASShiTqIybxZ0U3wGLiUeJ1PKf8ykw=
-AllowedIPs = 0.0.0.0/0, ::/0
-Endpoint = 203.0.113.1:51820
-PersistentKeepalive = 25
-"""
 
     fun tunnelName(profile: VpnProfile): String {
         val slug = profile.name.lowercase().filter { it.isLetterOrDigit() }.take(8)
@@ -67,6 +52,8 @@ PersistentKeepalive = 25
             allowed.isBlank() -> return Result.failure(IllegalArgumentException("Allowed IPs are required."))
             endpoint.isNotBlank() && !endpointLooksValid(endpoint) ->
                 return Result.failure(IllegalArgumentException("Endpoint should look like host:51820."))
+            endpoint.isNotBlank() && com.phonekey.vpn.domain.model.ProtocolPolicy.isDocumentationEndpoint(endpoint) ->
+                return Result.failure(IllegalArgumentException(com.phonekey.vpn.domain.model.ProtocolPolicy.DOCUMENTATION_ENDPOINT))
             fields.presharedKey.isNotBlank() && !isPlausibleKey(fields.presharedKey) ->
                 return Result.failure(IllegalArgumentException("Preshared key must be a 32-byte key, or left empty."))
         }
@@ -102,11 +89,19 @@ PersistentKeepalive = 25
         if (raw.toByteArray().size > MAX_BYTES) {
             return Result.failure(IllegalArgumentException("Config is larger than 1 MB."))
         }
-        if (raw.startsWith("{")) return importXray(raw, suggestedName)
+        if (raw.startsWith("{")) {
+            return Result.failure(
+                IllegalArgumentException("Xray and V2Ray are not implemented. PhoneKey only imports WireGuard configs."),
+            )
+        }
         if (raw.contains("[Interface]", ignoreCase = true)) return importWireGuard(raw, suggestedName)
-        if (isSstp(raw)) return importSstp(raw, suggestedName)
+        if (isSstp(raw)) {
+            return Result.failure(
+                IllegalArgumentException("SSTP is not implemented. PhoneKey only imports WireGuard configs."),
+            )
+        }
         return Result.failure(
-            IllegalArgumentException("Unrecognized config. Use a WireGuard .conf, Xray JSON, or an SSTP profile."),
+            IllegalArgumentException("Unrecognized config. Paste a WireGuard .conf."),
         )
     }
 
@@ -117,18 +112,23 @@ PersistentKeepalive = 25
     }
 
     /**
-     * WireGuard for Android accepts ExcludedApplications inside [Interface].
-     * Package names are typed by the user. QUERY_ALL_PACKAGES is intentionally not used.
+     * Writes AllowedApplications (include-only) or ExcludedApplications (bypass)
+     * and removes the opposite key so the two lists cannot both apply.
      */
-    fun withExcludedApplications(configText: String, packages: List<String>): String {
+    fun withApplicationFilter(configText: String, packages: List<String>, includeOnly: Boolean): String {
         val cleaned = packages.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
-        if (cleaned.isEmpty()) return configText
-        val line = "ExcludedApplications = ${cleaned.joinToString(", ")}"
-        val pattern = Regex("(?im)^ExcludedApplications\\s*=.*$")
-        if (pattern.containsMatchIn(configText)) return pattern.replace(configText, line)
+        val keep = if (includeOnly) "AllowedApplications" else "ExcludedApplications"
+        val drop = if (includeOnly) "ExcludedApplications" else "AllowedApplications"
+        var text = Regex("(?im)^$drop\\s*=.*(?:\\R)?").replace(configText, "")
+        if (cleaned.isEmpty()) {
+            return Regex("(?im)^$keep\\s*=.*(?:\\R)?").replace(text, "")
+        }
+        val line = "$keep = ${cleaned.joinToString(", ")}"
+        val pattern = Regex("(?im)^$keep\\s*=.*$")
+        if (pattern.containsMatchIn(text)) return pattern.replace(text, line)
         val interfaceHeader = Regex("(?im)^\\[Interface]\\s*$")
-        if (!interfaceHeader.containsMatchIn(configText)) return configText
-        return interfaceHeader.replace(configText) { "${it.value}\n$line" }
+        if (!interfaceHeader.containsMatchIn(text)) return text
+        return interfaceHeader.replace(text) { "${it.value}\n$line" }
     }
 
     private fun importWireGuard(raw: String, suggestedName: String?): Result<VpnProfile> {
@@ -151,6 +151,8 @@ PersistentKeepalive = 25
                 return Result.failure(IllegalArgumentException("Peer public key is missing or not a WireGuard key."))
             allowed.isBlank() ->
                 return Result.failure(IllegalArgumentException("Peer AllowedIPs is missing."))
+            endpoint != null && com.phonekey.vpn.domain.model.ProtocolPolicy.isDocumentationEndpoint(endpoint) ->
+                return Result.failure(IllegalArgumentException(com.phonekey.vpn.domain.model.ProtocolPolicy.DOCUMENTATION_ENDPOINT))
         }
         val host = endpoint?.substringBefore(':')?.ifBlank { null }
         val name = suggestedName?.trim().takeUnless { it.isNullOrEmpty() }
@@ -163,42 +165,6 @@ PersistentKeepalive = 25
                 rawConfig = raw.trim() + "\n",
                 endpoint = endpoint,
                 address = address,
-            ),
-        )
-    }
-
-    private fun importXray(raw: String, suggestedName: String?): Result<VpnProfile> {
-        val root = try {
-            JsonParser.parseString(raw).asJsonObject
-        } catch (_: Exception) {
-            return Result.failure(IllegalArgumentException("Xray config is not valid JSON."))
-        }
-        val looksLikeXray = root.has("outbounds") || root.has("inbounds") || root.has("protocol")
-        if (!looksLikeXray) {
-            return Result.failure(IllegalArgumentException("JSON has no Xray outbounds, inbounds, or protocol."))
-        }
-        val remarks = root.get("remarks")?.takeIf { it.isJsonPrimitive }?.asString
-        val name = suggestedName?.trim().takeUnless { it.isNullOrEmpty() }
-            ?: remarks?.takeIf { it.isNotBlank() }
-            ?: "Xray"
-        return Result.success(
-            VpnProfile(
-                name = name,
-                protocol = Protocol.XRAY,
-                rawConfig = raw.trim() + "\n",
-            ),
-        )
-    }
-
-    private fun importSstp(raw: String, suggestedName: String?): Result<VpnProfile> {
-        val name = suggestedName?.trim().takeUnless { it.isNullOrEmpty() } ?: "SSTP"
-        val endpoint = Regex("(?i)sstp://[^\\s]+").find(raw)?.value
-        return Result.success(
-            VpnProfile(
-                name = name,
-                protocol = Protocol.SSTP,
-                rawConfig = raw.trim() + "\n",
-                endpoint = endpoint,
             ),
         )
     }

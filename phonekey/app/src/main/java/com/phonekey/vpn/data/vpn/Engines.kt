@@ -18,13 +18,9 @@ import java.net.InetAddress
 import java.util.concurrent.TimeUnit
 
 /**
- * Hard block is not possible on top of GoBackend without forking it.
- * [com.wireguard.android.backend.GoBackend.VpnService.stopSelf] is final and
- * tears the interface down. PhoneKey reconnects instead, and the settings
- * screen points at Android's Always-on VPN lockdown.
- *
- * TODO: keep a userspace-free VpnService.Builder.establish() alive across an
- * unexpected drop so packets are blackholed until the user disconnects.
+ * A userspace blackhole can be held by [com.phonekey.vpn.service.PhoneKeyVpnService]
+ * after a drop, but only while that process is alive. Android's Always-on VPN
+ * plus "Block connections without VPN" is the block that survives process death.
  */
 object KillSwitch {
     const val MAX_RECONNECTS = 3
@@ -75,7 +71,11 @@ class WireGuardEngine(
 
     override suspend fun connect(profile: VpnProfile, options: EngineOptions) {
         withContext(Dispatchers.IO) {
-            val text = ConfigTexts.withExcludedApplications(profile.rawConfig, options.excludedPackages)
+            val text = ConfigTexts.withApplicationFilter(
+                profile.rawConfig,
+                options.packages,
+                options.includeOnly,
+            )
             val config = try {
                 Config.parse(ByteArrayInputStream(text.toByteArray(Charsets.UTF_8)))
             } catch (error: Exception) {
@@ -125,10 +125,8 @@ class XrayEngine : VpnEngine {
     override val protocol = Protocol.XRAY
 
     override suspend fun connect(profile: VpnProfile, options: EngineOptions) {
-        throw UnsupportedOperationException(
-            "Xray/V2Ray is not bundled. TODO: integrate a maintained open-source core " +
-                "(libXray or xray-core), pass PhoneKeyVpnService's TUN fd into it, and " +
-                "feed it the stored JSON. Nothing is sent anywhere.",
+        throw IllegalStateException(
+            "Xray is not implemented. PhoneKey connects with WireGuard only.",
         )
     }
 
@@ -141,9 +139,8 @@ class SstpEngine : VpnEngine {
     override val protocol = Protocol.SSTP
 
     override suspend fun connect(profile: VpnProfile, options: EngineOptions) {
-        throw UnsupportedOperationException(
-            "SSTP is not bundled. TODO: integrate a maintained open-source SSTP client " +
-                "and route it through PhoneKeyVpnService. The profile text is stored only.",
+        throw IllegalStateException(
+            "SSTP is not implemented. PhoneKey connects with WireGuard only.",
         )
     }
 

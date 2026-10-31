@@ -23,7 +23,8 @@ import androidx.compose.ui.unit.dp
 import com.phonekey.vpn.ui.theme.PhoneKeyTheme
 
 /**
- * Deep link landing for `phonekey://activate` and `https://phonekey.app/activate`.
+ * Deep link landing for `phonekey://activate` and
+ * `https://tajoor621.github.io/PhoneKey23/activate`.
  * There is no license, account, or payment step.
  */
 class ActivateActivity : ComponentActivity() {

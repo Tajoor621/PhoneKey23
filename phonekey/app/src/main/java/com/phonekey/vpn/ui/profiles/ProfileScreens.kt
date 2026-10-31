@@ -23,7 +23,6 @@ import androidx.compose.material3.Button
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
@@ -43,6 +42,7 @@ import androidx.compose.ui.unit.dp
 import com.phonekey.vpn.R
 import com.phonekey.vpn.data.parser.ConfigTexts
 import com.phonekey.vpn.data.parser.WireGuardFields
+import com.phonekey.vpn.domain.model.ProtocolPolicy
 import com.phonekey.vpn.domain.model.VpnProfile
 import com.phonekey.vpn.ui.PhoneKeyViewModel
 import com.phonekey.vpn.ui.encodeQr
@@ -66,7 +66,7 @@ fun ProfilesScreen(
             Text("No profiles yet", style = MaterialTheme.typography.headlineMedium)
             Spacer(Modifier.height(8.dp))
             Text(
-                "Add a WireGuard config from a file, a QR code, or by typing the keys. Xray and SSTP can be stored, but those engines are not bundled.",
+                "Add your own WireGuard config from a file, a QR code, or the form. Xray and SSTP are not implemented.",
                 style = MaterialTheme.typography.bodyLarge,
                 color = MaterialTheme.colorScheme.onSurfaceVariant,
             )
@@ -111,6 +111,9 @@ private fun ProfileRow(
         Row(verticalAlignment = Alignment.CenterVertically) {
             Column(Modifier.weight(1f)) {
                 Text(profile.protocol.label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                if (!ProtocolPolicy.implemented(profile.protocol)) {
+                    Text("Not implemented", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.error)
+                }
                 Text(profile.name, style = MaterialTheme.typography.titleMedium)
                 profile.endpoint?.let {
                     Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -169,12 +172,8 @@ fun AddConfigScreen(
                 Choice("Scan a QR code") { onQr() }
                 Choice("WireGuard form") { mode = AddMode.Manual }
                 Choice("Paste config") { mode = AddMode.Paste }
-                OutlinedButton(
-                    onClick = { vm.saveRaw(null, "Example", ConfigTexts.EXAMPLE_WIREGUARD.trim()) },
-                    modifier = Modifier.fillMaxWidth(),
-                ) { Text("Load the example config") }
                 Text(
-                    "The example uses documentation IP 203.0.113.1. It will not open a real tunnel.",
+                    "PhoneKey does not ship a server. Paste a WireGuard config from your own endpoint. Documentation addresses such as 203.0.113.1 are refused. Xray and SSTP are not implemented.",
                     style = MaterialTheme.typography.bodyMedium,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
                     modifier = Modifier.padding(top = 8.dp),
@@ -203,7 +202,7 @@ fun AddConfigScreen(
                     modifier = Modifier
                         .fillMaxWidth()
                         .height(220.dp),
-                    label = { Text("WireGuard, Xray JSON, or SSTP") },
+                    label = { Text("WireGuard config") },
                 )
                 Spacer(Modifier.height(12.dp))
                 Button(onClick = { vm.importText(raw, name.ifBlank { null }) }, modifier = Modifier.fillMaxWidth()) {

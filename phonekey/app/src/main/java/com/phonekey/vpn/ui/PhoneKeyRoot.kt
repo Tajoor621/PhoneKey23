@@ -2,10 +2,12 @@ package com.phonekey.vpn.ui
 
 import android.Manifest
 import android.app.Activity
+import android.content.pm.PackageManager
 import android.net.VpnService
 import android.os.Build
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.core.content.ContextCompat
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
@@ -43,6 +45,7 @@ import com.phonekey.vpn.ui.profiles.DeleteDialog
 import com.phonekey.vpn.ui.profiles.EditConfigScreen
 import com.phonekey.vpn.ui.profiles.ProfilesScreen
 import com.phonekey.vpn.ui.profiles.QrDialog
+import com.phonekey.vpn.data.store.InstalledApps
 import com.phonekey.vpn.ui.settings.SettingsScreen
 import com.phonekey.vpn.ui.theme.PhoneKeyTheme
 
@@ -82,7 +85,42 @@ fun PhoneKeyRoot(connectTick: Int = 0, vm: PhoneKeyViewModel = viewModel()) {
         val scan = rememberLauncherForActivityResult(ScanContract()) { result ->
             result.contents?.let { vm.importText(it, "Scanned") }
         }
+        lateinit var launchScan: () -> Unit
+        val camera = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            if (granted) launchScan() else vm.note("Camera permission is only used to scan a config QR code.")
+        }
+        launchScan = {
+            scan.launch(
+                ScanOptions().apply {
+                    setDesiredBarcodeFormats(ScanOptions.QR_CODE)
+                    setPrompt("Scan a WireGuard config")
+                    setBeepEnabled(false)
+                    setOrientationLocked(false)
+                    setCaptureActivity(com.journeyapps.barcodescanner.CaptureActivity::class.java)
+                },
+            )
+        }
         val notifications = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { }
+        val exportFile = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/json")) { uri ->
+            if (uri == null) return@rememberLauncherForActivityResult
+            try {
+                context.contentResolver.openOutputStream(uri)?.use { stream ->
+                    stream.write(vm.exportBundle().toByteArray())
+                }
+                vm.note("Profiles exported. The file contains private keys.")
+            } catch (error: Exception) {
+                vm.note(error.message ?: "Could not export profiles.")
+            }
+        }
+        val importBundle = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
+            if (uri != null) vm.importUri(uri)
+        }
+
+        fun startScan() {
+            val granted = ContextCompat.checkSelfPermission(context, Manifest.permission.CAMERA) ==
+                PackageManager.PERMISSION_GRANTED
+            if (granted) launchScan() else camera.launch(Manifest.permission.CAMERA)
+        }
 
         fun connect() {
             val prepare = VpnService.prepare(context)
@@ -176,7 +214,13 @@ fun PhoneKeyRoot(connectTick: Int = 0, vm: PhoneKeyViewModel = viewModel()) {
                     )
                 }
                 composable("settings") {
-                    SettingsScreen(settings = settings, onChange = vm::updateSettings)
+                    SettingsScreen(
+                        settings = settings,
+                        apps = remember { InstalledApps.list(context) },
+                        onChange = vm::updateSettings,
+                        onExport = { exportFile.launch("phonekey-profiles.json") },
+                        onImport = { importBundle.launch(arrayOf("application/json", "text/plain", "*/*")) },
+                    )
                 }
                 composable("add") {
                     AddConfigScreen(
@@ -185,17 +229,7 @@ fun PhoneKeyRoot(connectTick: Int = 0, vm: PhoneKeyViewModel = viewModel()) {
                         onFile = {
                             openFile.launch(arrayOf("*/*", "text/plain", "application/json"))
                         },
-                        onQr = {
-                            scan.launch(
-                                ScanOptions().apply {
-                                    setDesiredBarcodeFormats(ScanOptions.QR_CODE)
-                                    setPrompt("Scan a WireGuard or Xray config")
-                                    setBeepEnabled(false)
-                                    setOrientationLocked(false)
-                                    setCaptureActivity(com.journeyapps.barcodescanner.CaptureActivity::class.java)
-                                },
-                            )
-                        },
+                        onQr = { startScan() },
                     )
                 }
                 composable("edit/{id}") { entry ->

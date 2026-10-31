@@ -19,6 +19,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.cancel
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
+import android.os.ParcelFileDescriptor
 import java.util.Locale
 import java.util.concurrent.atomic.AtomicInteger
 
@@ -33,6 +34,7 @@ class PhoneKeyVpnService : GoBackend.VpnService() {
     private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
     private var latest: Session = Session()
     private var boundGeneration = 0
+    private var blackhole: ParcelFileDescriptor? = null
 
     override fun onCreate() {
         super.onCreate()
@@ -75,9 +77,34 @@ class PhoneKeyVpnService : GoBackend.VpnService() {
     }
 
     override fun onDestroy() {
+        releaseBlackhole()
         scope.cancel()
         if (instance === this) instance = null
         super.onDestroy()
+    }
+
+    /** Holds a tunnel that routes everything and forwards nothing. Replaces any WireGuard fd. */
+    fun engageBlackhole(): Boolean {
+        releaseBlackhole()
+        return try {
+            val builder = Builder()
+                .setSession("PhoneKey block")
+                .addAddress("10.255.255.2", 32)
+                .addRoute("0.0.0.0", 0)
+                .addRoute("::", 0)
+                .setMtu(1280)
+                .setBlocking(true)
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) builder.setMetered(false)
+            blackhole = builder.establish()
+            blackhole != null
+        } catch (_: Exception) {
+            false
+        }
+    }
+
+    fun releaseBlackhole() {
+        blackhole?.close()
+        blackhole = null
     }
 
     private fun stopQuietly() {
@@ -115,8 +142,10 @@ class PhoneKeyVpnService : GoBackend.VpnService() {
             PendingIntent.FLAG_UPDATE_CURRENT or PendingIntent.FLAG_IMMUTABLE,
         )
         val title = session.profileName ?: getString(R.string.app_name)
-        val text = when (session.status) {
-            TunnelStatus.CONNECTED -> buildString {
+        val blocking = hasBlackhole()
+        val text = when {
+            blocking && session.status != TunnelStatus.CONNECTED -> getString(R.string.notif_blocking)
+            session.status == TunnelStatus.CONNECTED -> buildString {
                 append(getString(R.string.notif_connected))
                 append(" · ")
                 append(formatRate(session.rxSpeedBps))
@@ -133,11 +162,13 @@ class PhoneKeyVpnService : GoBackend.VpnService() {
             .setContentTitle(title)
             .setContentText(text)
             .setContentIntent(open)
-            .setOngoing(session.status == TunnelStatus.CONNECTED || session.status == TunnelStatus.CONNECTING)
+            .setOngoing(
+                blocking || session.status == TunnelStatus.CONNECTED || session.status == TunnelStatus.CONNECTING,
+            )
             .setOnlyAlertOnce(true)
             .setCategory(NotificationCompat.CATEGORY_SERVICE)
             .setForegroundServiceBehavior(NotificationCompat.FOREGROUND_SERVICE_IMMEDIATE)
-        if (session.status == TunnelStatus.CONNECTED || session.status == TunnelStatus.CONNECTING) {
+        if (session.status == TunnelStatus.CONNECTED || session.status == TunnelStatus.CONNECTING || blocking) {
             builder.addAction(0, getString(R.string.action_disconnect), disconnect)
         } else {
             builder.addAction(0, getString(R.string.action_connect), connect)
@@ -181,12 +212,23 @@ class PhoneKeyVpnService : GoBackend.VpnService() {
 
         fun requestStop() {
             liveGeneration = generation.incrementAndGet()
+            instance?.releaseBlackhole()
             instance?.stopIfStale()
         }
 
-        private fun PhoneKeyVpnService.stopIfStale() {
-            if (boundGeneration != liveGeneration) stopQuietly()
+        fun holdBlackhole(): Boolean = instance?.engageBlackhole() == true
+
+        fun releaseBlackhole() {
+            instance?.releaseBlackhole()
         }
+
+        fun isBlocking(): Boolean = instance?.hasBlackhole() == true
+
+        private fun PhoneKeyVpnService.stopIfStale() {
+            if (boundGeneration != liveGeneration && !hasBlackhole()) stopQuietly()
+        }
+
+        private fun PhoneKeyVpnService.hasBlackhole(): Boolean = blackhole != null
 
         suspend fun awaitReady(): Boolean {
             val start = SystemClock.elapsedRealtime()

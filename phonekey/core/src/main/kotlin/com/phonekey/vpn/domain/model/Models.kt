@@ -39,6 +39,7 @@ data class AppSettings(
     val autoConnectOnLaunch: Boolean = false,
     val killSwitch: Boolean = false,
     val splitTunnelEnabled: Boolean = false,
+    val splitIncludeOnly: Boolean = false,
     val splitTunnelPackages: List<String> = emptyList(),
     val selectedProfileId: String? = null,
 )

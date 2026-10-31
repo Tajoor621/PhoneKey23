@@ -5,9 +5,11 @@ import android.net.Uri
 import androidx.lifecycle.AndroidViewModel
 import androidx.lifecycle.viewModelScope
 import com.phonekey.vpn.PhoneKeyApp
+import com.phonekey.vpn.data.parser.BundleCodec
 import com.phonekey.vpn.data.parser.ConfigTexts
 import com.phonekey.vpn.data.parser.WireGuardFields
 import com.phonekey.vpn.domain.model.AppSettings
+import com.phonekey.vpn.domain.model.ProtocolPolicy
 import com.phonekey.vpn.domain.model.VpnProfile
 import kotlinx.coroutines.flow.MutableSharedFlow
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -50,6 +52,12 @@ class PhoneKeyViewModel(app: Application) : AndroidViewModel(app) {
 
     fun select(id: String) {
         viewModelScope.launch {
+            val profile = container.profileRepository.find(id) ?: return@launch
+            val blocked = ProtocolPolicy.connectBlockReason(profile)
+            if (blocked != null) {
+                bannerFlow.value = blocked
+                return@launch
+            }
             container.settingsRepository.update { it.copy(selectedProfileId = id) }
         }
     }
@@ -69,10 +77,32 @@ class PhoneKeyViewModel(app: Application) : AndroidViewModel(app) {
 
     fun importText(text: String, suggestedName: String? = null) {
         viewModelScope.launch {
-            val result = ConfigTexts.import(text, suggestedName)
+            val trimmed = text.trim().removePrefix("\uFEFF")
+            if (trimmed.startsWith("{") && "\"phonekey\"" in trimmed) {
+                importBundle(trimmed)
+                return@launch
+            }
+            val result = ConfigTexts.import(trimmed, suggestedName)
             result.onSuccess { saveNew(it) }
             result.onFailure { bannerFlow.value = it.message }
         }
+    }
+
+    fun exportBundle(): String = BundleCodec.export(container.profileRepository.profiles.value)
+
+    private suspend fun importBundle(text: String) {
+        val result = BundleCodec.import(text)
+        result.onFailure {
+            bannerFlow.value = it.message
+            return
+        }
+        val imported = result.getOrThrow()
+        imported.forEach { container.profileRepository.upsert(it) }
+        val selectable = imported.firstOrNull { ProtocolPolicy.connectBlockReason(it) == null }
+        if (selectable != null) {
+            container.settingsRepository.update { it.copy(selectedProfileId = selectable.id) }
+        }
+        bannerFlow.value = "Imported ${imported.size} profile${if (imported.size == 1) "" else "s"}."
     }
 
     fun importUri(uri: Uri) {

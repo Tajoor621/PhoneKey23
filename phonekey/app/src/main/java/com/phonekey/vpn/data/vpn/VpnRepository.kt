@@ -8,6 +8,7 @@ import com.phonekey.vpn.data.store.ProfileRepository
 import com.phonekey.vpn.data.store.SettingsRepository
 import com.phonekey.vpn.domain.engine.EngineOptions
 import com.phonekey.vpn.domain.engine.VpnEngine
+import com.phonekey.vpn.domain.model.ProtocolPolicy
 import com.phonekey.vpn.domain.model.Session
 import com.phonekey.vpn.domain.model.TunnelStatus
 import com.phonekey.vpn.domain.model.VpnProfile
@@ -102,8 +103,20 @@ class VpnRepository(
     }
 
     private suspend fun bringUp(profile: VpnProfile, serviceAlreadyUp: Boolean) {
+        val blocked = ProtocolPolicy.connectBlockReason(profile)
+        if (blocked != null) {
+            _session.value = Session(
+                status = TunnelStatus.ERROR,
+                profileId = profile.id,
+                profileName = profile.name,
+                protocol = profile.protocol,
+                message = blocked,
+            )
+            return
+        }
         ignoreDown = true
         stopPolling()
+        PhoneKeyVpnService.releaseBlackhole()
         _session.value = Session(
             status = TunnelStatus.CONNECTING,
             profileId = profile.id,
@@ -131,7 +144,8 @@ class VpnRepository(
             engine.connect(
                 profile,
                 EngineOptions(
-                    excludedPackages = if (prefs.splitTunnelEnabled) prefs.splitTunnelPackages else emptyList(),
+                    packages = if (prefs.splitTunnelEnabled) prefs.splitTunnelPackages else emptyList(),
+                    includeOnly = prefs.splitIncludeOnly,
                 ),
             )
             activeEngine = engine
@@ -171,6 +185,7 @@ class VpnRepository(
             val engine = activeEngine
             activeEngine = null
             runCatching { engine?.disconnect() }
+            PhoneKeyVpnService.releaseBlackhole()
             PhoneKeyVpnService.requestStop()
             _session.value = Session(status = TunnelStatus.DISCONNECTED)
         }
@@ -186,19 +201,35 @@ class VpnRepository(
                 stopPolling()
                 activeEngine = null
                 val prefs = settings.snapshot()
+                val blocking = prefs.killSwitch && PhoneKeyVpnService.holdBlackhole()
                 if (prefs.killSwitch && reconnects < KillSwitch.MAX_RECONNECTS) {
                     reconnects += 1
                     _session.update {
                         it.copy(
                             status = TunnelStatus.ERROR,
-                            message = "Tunnel dropped. Trying to bring it back. " +
-                                "For a hard block, turn on Always-on VPN and “Block connections without VPN”.",
+                            message = if (blocking) {
+                                "Tunnel dropped. Traffic is blocked while PhoneKey reconnects. " +
+                                    "This block ends if the app is killed. Always-on VPN is the durable switch."
+                            } else {
+                                "Tunnel dropped. Trying to bring it back. The in-app block did not engage. " +
+                                    "Turn on Always-on VPN and “Block connections without VPN”."
+                            },
                         )
                     }
                     appScope.launch {
                         delay(700)
                         connectAwait(profileId, serviceAlreadyUp = false)
                     }
+                } else if (blocking) {
+                    _session.value = Session(
+                        status = TunnelStatus.ERROR,
+                        profileId = profileId,
+                        profileName = _session.value.profileName,
+                        protocol = _session.value.protocol,
+                        message = "Tunnel dropped. PhoneKey is blocking other traffic until you disconnect. " +
+                            "This lasts only while the app process is alive. For a block that survives that, " +
+                            "set Always-on VPN and “Block connections without VPN”.",
+                    )
                 } else {
                     PhoneKeyVpnService.requestStop()
                     _session.value = Session(
@@ -207,7 +238,7 @@ class VpnRepository(
                         profileName = _session.value.profileName,
                         protocol = _session.value.protocol,
                         message = if (prefs.killSwitch) {
-                            "Tunnel dropped and reconnect gave up. Traffic is not being blocked by PhoneKey. Use system VPN lockdown."
+                            "Tunnel dropped and reconnect gave up. PhoneKey is not blocking traffic. Use system VPN lockdown."
                         } else {
                             "Tunnel dropped."
                         },

@@ -4,7 +4,8 @@ import com.phonekey.vpn.domain.model.Protocol
 import com.phonekey.vpn.domain.model.VpnProfile
 
 data class EngineOptions(
-    val excludedPackages: List<String> = emptyList(),
+    val packages: List<String> = emptyList(),
+    val includeOnly: Boolean = false,
 )
 
 data class TrafficSnapshot(
@@ -13,8 +14,8 @@ data class TrafficSnapshot(
 )
 
 /**
- * One tunnel implementation. [WireGuardEngine] is real. Xray and SSTP are
- * placeholders that refuse to connect until a maintained FOSS core is wired in.
+ * One tunnel implementation. WireGuard is the only engine that connects.
+ * Xray and SSTP refuse so a stale profile cannot open a tunnel.
  */
 interface VpnEngine {
     val protocol: Protocol

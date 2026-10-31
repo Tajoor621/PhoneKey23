@@ -15,6 +15,7 @@ import java.io.File
 
 class ProfileRepository(context: Context) {
     private val gson = Gson()
+    private val cipher = ProfileCipher()
     private val file = File(context.applicationContext.filesDir, "profiles.json")
     private val gate = Mutex()
     private val _profiles = MutableStateFlow<List<VpnProfile>>(emptyList())
@@ -47,17 +48,28 @@ class ProfileRepository(context: Context) {
     }
 
     private fun readQuietly(): List<VpnProfile> = try {
-        if (!file.exists()) emptyList() else {
+        if (!file.exists()) {
+            emptyList()
+        } else {
             val type = object : TypeToken<List<VpnProfile>>() {}.type
-            gson.fromJson<List<VpnProfile>>(file.readText(), type) ?: emptyList()
+            val stored = gson.fromJson<List<VpnProfile>>(file.readText(), type) ?: emptyList()
+            val needsSeal = stored.any { !it.rawConfig.startsWith(ProfileCipher.PREFIX) }
+            val open = stored.map { it.copy(rawConfig = cipher.open(it.rawConfig)) }
+            if (needsSeal && open.isNotEmpty()) writeSync(open)
+            open
         }
     } catch (_: Exception) {
         emptyList()
     }
 
     private suspend fun write(list: List<VpnProfile>) = withContext(Dispatchers.IO) {
+        writeSync(list)
+    }
+
+    private fun writeSync(list: List<VpnProfile>) {
+        val sealed = list.map { it.copy(rawConfig = cipher.seal(it.rawConfig)) }
         val tmp = File(file.parentFile, "profiles.json.tmp")
-        tmp.writeText(gson.toJson(list))
+        tmp.writeText(gson.toJson(sealed))
         if (!tmp.renameTo(file)) {
             file.writeText(tmp.readText())
             tmp.delete()
