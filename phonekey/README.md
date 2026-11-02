@@ -66,9 +66,9 @@ Android Studio Ladybug or newer. JDK 17.
 ./gradlew :app:assembleDebug
 ```
 
-`:core:test` is plain JVM and covers WireGuard parsing, the documentation-endpoint refusal, Xray/SSTP refusal, the profile-list codec, and settings decoding. `ConnectFlowTest` is an instrumented Compose test (`connectedDebugAndroidTest`) and needs a device.
+`:core:test` is plain JVM and covers WireGuard parsing, the documentation-endpoint refusal, Xray/SSTP refusal, the profile-list codec, and settings decoding. `ConnectFlowTest` is an instrumented Compose test. CI runs it on an API 30 emulator (`connectedDebugAndroidTest`).
 
-Release signing reads `KEYSTORE_FILE`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, and `KEY_PASSWORD` from the environment. Without them, `assembleRelease` is unsigned. CI decodes `KEYSTORE_BASE64` into that file when the secret exists.
+Release signing reads `KEYSTORE_FILE`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, and `KEY_PASSWORD` from the environment. Without them, `assembleRelease` is unsigned and CI publishes the debug APK. The workflow installs platform 35 with the runner’s `sdkmanager`. It does not use `android-actions/setup-android`, which fails while installing the removed `tools` package.
 
 ## Layout
 

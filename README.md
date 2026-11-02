@@ -4,6 +4,8 @@ PhoneKey is a free, privacy-first WireGuard client for Android, plus a web compa
 
 Live site: [tajoor621.github.io/PhoneKey23](https://tajoor621.github.io/PhoneKey23/)
 
+Profile: [tajoor621.github.io](https://tajoor621.github.io/)
+
 ## Protocol status
 
 | Protocol | Status |
@@ -30,7 +32,7 @@ cd phonekey
 ./gradlew :app:assembleDebug
 ```
 
-The debug APK is built on every push by GitHub Actions. A tag `v*` also publishes that APK, and a signed release APK when the `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, and `KEY_PASSWORD` repository secrets are set. See [phonekey/README.md](phonekey/README.md) for permissions, the kill switch, and key storage.
+The debug APK is built on every push by GitHub Actions. A tag `v*` publishes that APK, plus a signed release APK when the `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, and `KEY_PASSWORD` repository secrets are set. `v1.0.0` never published an APK: the workflow used an Android setup action that tried to install a removed SDK package. `v1.0.1` is the first release built with the runner’s own SDK. See [phonekey/README.md](phonekey/README.md) for permissions, the kill switch, and key storage.
 
 ## Web companion
 
