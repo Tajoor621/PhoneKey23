@@ -45,7 +45,7 @@ Launcher-visible apps are listed without `QUERY_ALL_PACKAGES`. Search and multi-
 | Permission | Why |
 | --- | --- |
 | `INTERNET`, `ACCESS_NETWORK_STATE` | The tunnel and a DNS check of the endpoint host. |
-| `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_VPN` | The ongoing VPN notification on API 34+. |
+| `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SPECIAL_USE` | The ongoing VPN notification on API 34+. The public SDK this project compiles against does not accept `foregroundServiceType="vpn"`, so the service is `specialUse` with subtype `vpn`. It is still a `VpnService`. |
 | `POST_NOTIFICATIONS` | Asked when the main screen first opens, so the status notification can be posted. |
 | `RECEIVE_BOOT_COMPLETED` | Auto-connect on boot, only if that setting is on. |
 | `WAKE_LOCK` | A short partial wake lock while connect runs. |
