@@ -12,10 +12,8 @@ import com.wireguard.android.backend.Tunnel
 import com.wireguard.config.Config
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
-import okhttp3.OkHttpClient
 import java.io.ByteArrayInputStream
 import java.net.InetAddress
-import java.util.concurrent.TimeUnit
 
 /**
  * A userspace blackhole can be held by [com.phonekey.vpn.service.PhoneKeyVpnService]
@@ -27,18 +25,13 @@ object KillSwitch {
 }
 
 class EndpointProbe {
-    private val client = OkHttpClient.Builder()
-        .dns { hostname -> InetAddress.getAllByName(hostname).toList() }
-        .connectTimeout(4, TimeUnit.SECONDS)
-        .build()
-
     /** Returns the host when a public DNS lookup fails. Never contacts an ad or telemetry host. */
     fun unresolvedHost(configText: String): String? {
         val endpoint = ConfigTexts.endpointHost(configText) ?: return null
         val host = endpoint.substringBeforeLast(':').trim().removePrefix("[").removeSuffix("]")
         if (host.isEmpty() || host.any { it == ':' } || host.all { it.isDigit() || it == '.' }) return null
         return try {
-            if (client.dns.lookup(host).isEmpty()) host else null
+            if (InetAddress.getAllByName(host).isEmpty()) host else null
         } catch (_: Exception) {
             host
         }

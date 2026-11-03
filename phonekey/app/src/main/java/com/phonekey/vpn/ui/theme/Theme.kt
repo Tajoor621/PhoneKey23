@@ -6,6 +6,7 @@ import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
 import androidx.compose.ui.text.font.FontFamily
@@ -33,6 +34,7 @@ private val SurfaceLight2 = androidx.compose.ui.graphics.Color(0xFFE7E2D4)
 private val LineLight = androidx.compose.ui.graphics.Color(0xFFD5D0C4)
 private val ClayDeep = androidx.compose.ui.graphics.Color(0xFFA33B24)
 
+@OptIn(ExperimentalTextApi::class)
 private fun variable(res: Int, weight: FontWeight) = Font(
     resId = res,
     weight = weight,

@@ -32,7 +32,7 @@ cd phonekey
 ./gradlew :app:assembleDebug
 ```
 
-The debug APK is built on every push by GitHub Actions. A tag `v*` publishes that APK, plus a signed release APK when the `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, and `KEY_PASSWORD` repository secrets are set. `v1.0.0` never published an APK: the workflow used an Android setup action that tried to install a removed SDK package. `v1.0.1` is the first release built with the runner’s own SDK. See [phonekey/README.md](phonekey/README.md) for permissions, the kill switch, and key storage.
+The debug APK is built on every push by GitHub Actions. A tag `v*` publishes that APK, plus a signed release APK when the `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, and `KEY_PASSWORD` repository secrets are set. `v1.0.0` never published an APK: the workflow used an Android setup action that tried to install a removed SDK package. `v1.0.1` did not compile: the OkHttp DNS lambda, a non-boolean `when` branch, a missing notification string, and an experimental font API failed the build. `v1.0.2` is the first tag after those errors were fixed. See [phonekey/README.md](phonekey/README.md) for permissions, the kill switch, and key storage.
 
 ## Web companion
 

@@ -6,6 +6,7 @@
     <string name="channel_desc">Shows whether PhoneKey is connected. No ads, no tracking.</string>
     <string name="notif_starting">Starting tunnel…</string>
     <string name="notif_connected">Connected</string>
+    <string name="notif_blocking">Blocking traffic until the tunnel is back</string>
     <string name="notif_disconnected">Disconnected</string>
     <string name="action_disconnect">Disconnect</string>
     <string name="action_connect">Connect</string>

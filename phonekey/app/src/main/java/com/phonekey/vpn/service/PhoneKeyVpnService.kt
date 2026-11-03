@@ -153,9 +153,9 @@ class PhoneKeyVpnService : GoBackend.VpnService() {
                 append(formatRate(session.txSpeedBps))
                 append(" up")
             }
-            TunnelStatus.CONNECTING -> getString(R.string.notif_starting)
-            TunnelStatus.ERROR -> session.message ?: getString(R.string.notif_disconnected)
-            TunnelStatus.DISCONNECTED -> getString(R.string.notif_disconnected)
+            session.status == TunnelStatus.CONNECTING -> getString(R.string.notif_starting)
+            session.status == TunnelStatus.ERROR -> session.message ?: getString(R.string.notif_disconnected)
+            else -> getString(R.string.notif_disconnected)
         }
         val builder = NotificationCompat.Builder(this, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_stat_key)

@@ -86,7 +86,7 @@ app/src/main/java/com/phonekey/vpn/
 
 ## Libraries
 
-AndroidX (core, lifecycle, activity, Compose, navigation, DataStore), Kotlin coroutines, `com.wireguard.android:tunnel`, ZXing Android Embedded 4.3.0, Gson, OkHttp (DNS check of the WireGuard endpoint host only). All of those are free and open source.
+AndroidX (core, lifecycle, activity, Compose, navigation, DataStore), Kotlin coroutines, `com.wireguard.android:tunnel`, ZXing Android Embedded 4.3.0, and Gson. Endpoint checks use `InetAddress`, not a HTTP client. All of those are free and open source.
 
 ## Not included
 
