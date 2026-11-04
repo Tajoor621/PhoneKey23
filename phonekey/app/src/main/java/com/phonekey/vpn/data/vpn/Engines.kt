@@ -10,7 +10,9 @@ import com.phonekey.vpn.domain.model.VpnProfile
 import com.wireguard.android.backend.GoBackend
 import com.wireguard.android.backend.Tunnel
 import com.wireguard.config.Config
+import android.os.SystemClock
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.withContext
 import java.io.ByteArrayInputStream
 import java.net.InetAddress
@@ -89,6 +91,20 @@ class WireGuardEngine(
                 throw IllegalStateException("WireGuard stayed down.")
             }
         }
+    }
+
+    override suspend fun awaitConnection(timeoutMillis: Long): Boolean = withContext(Dispatchers.IO) {
+        val tunnel = active ?: return@withContext false
+        val deadline = SystemClock.elapsedRealtime() + timeoutMillis.coerceAtLeast(0L)
+        while (SystemClock.elapsedRealtime() < deadline) {
+            val stats = runCatching { backend.getStatistics(tunnel) }.getOrNull()
+            val hasHandshake = stats?.peers()?.any { peerKey ->
+                (stats.peer(peerKey)?.latestHandshakeEpochMillis() ?: 0L) > 0L
+            } == true
+            if (hasHandshake) return@withContext true
+            delay(500)
+        }
+        false
     }
 
     override suspend fun disconnect() {
