@@ -151,7 +151,7 @@ jobs:
           KEYSTORE_FILE="$RUNNER_TEMP/phonekey-release.jks" ./gradlew :app:assembleRelease --no-daemon --stacktrace
           APK="app/build/outputs/apk/release/app-release.apk"
           test -s "$APK"
-          jarsigner -verify -verbose -certs "$APK"
+          apksigner verify --verbose --print-certs "$APK"
           mkdir -p ../release-assets
           cp "$APK" ../release-assets/PhoneKey23-release.apk
       - name: Package source and checksums
