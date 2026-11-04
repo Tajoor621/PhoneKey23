@@ -79,7 +79,8 @@ jobs:
           script: chmod +x gradlew && ./gradlew :app:connectedDebugAndroidTest --no-daemon --stacktrace
 
   debug-apk:
-    needs: [core-tests, web, compose-tests]
+    # Produce an installable smoke-test build after compile/unit gates; the emulator gate still blocks releases.
+    needs: [core-tests, web]
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
