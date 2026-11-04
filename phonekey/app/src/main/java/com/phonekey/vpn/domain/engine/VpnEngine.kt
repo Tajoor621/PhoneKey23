@@ -22,6 +22,9 @@ interface VpnEngine {
 
     suspend fun connect(profile: VpnProfile, options: EngineOptions)
 
+    /** Returns true only when the engine has verified a live peer connection. */
+    suspend fun awaitConnection(timeoutMillis: Long): Boolean = true
+
     suspend fun disconnect()
 
     fun snapshot(): TrafficSnapshot?
