@@ -1,76 +1,78 @@
-# PhoneKey for Android
+# PhoneKey23 for Android
 
-Free WireGuard client. Package `com.phonekey.vpn`. No account, no subscription, no ad SDK, no analytics SDK.
+Native Android WireGuard client. Package: `com.phonekey.vpn`. JDK 17, Kotlin, Jetpack Compose, `minSdk 26`, `targetSdk 35`, `compileSdk 35`.
 
-The project overview, the web companion, and the live page are in the [repository README](../README.md). This file is the Android build and behavior notes.
+**A real connection requires a working WireGuard server and a valid profile.** PhoneKey23 does not include or host a VPN server. The GitHub Pages website is not a VPN client; only this native Android app can request Android VPN permission and establish the system tunnel.
 
-## What it does
+## Android capabilities
 
-- Foreground `VpnService` (`PhoneKeyVpnService`) driven by the official WireGuard userspace tunnel (`com.wireguard.android:tunnel`).
-- Connection state on a `StateFlow`: Disconnected, Connecting, Connected, Error. The notification shows upload and download rate and a disconnect action. The home screen shows the same rates above the power button.
-- Quick Settings tile (`QuickTileService`) toggles the selected profile. It is unavailable until a WireGuard profile is selected.
-- Boot receiver (`AppOnBootReceiver`) connects after boot or an update when “Auto-connect on boot” is on and VPN permission was already granted.
-- Always-on VPN starts `PhoneKeyVpnService` without the in-app connect token. That path connects the selected profile.
-- Profiles: add, edit, delete, select. Import a WireGuard `.conf` from a file, a QR code, or a form. Export one profile as a QR code, or the whole list as JSON. The JSON contains private keys.
-- Xray JSON and SSTP text are recognized and refused. They cannot be selected.
-- Documentation endpoints (`203.0.113.0/24` and the other reserved example ranges) cannot be saved or connected. PhoneKey does not ship a server.
-- Deep links `phonekey://activate` and `https://tajoor621.github.io/PhoneKey23/activate` open a welcome screen. No license check.
+- Foreground `VpnService` implemented by `PhoneKeyVpnService` and driven by WireGuard `GoBackend`.
+- WireGuard profile import from a `.conf` file, QR code, or manual form.
+- Profile editing, selection, deletion, QR display and JSON export/import.
+- Notification actions, Quick Settings tile and optional auto-connect behavior.
+- Xray/V2Ray and SSTP are deliberately rejected because their tunnel engines are not implemented.
 
-## Protocols
+## Before connecting
 
-| Protocol | Behavior |
-| --- | --- |
-| WireGuard | Parses a `.conf`, builds the tunnel with `GoBackend`, and reports `wg` byte counters. |
-| Xray / V2Ray | Not implemented. `ProtocolPolicy` blocks selection. `XrayEngine.connect` throws if something calls it anyway. |
-| SSTP | Same refusal. See `SstpEngine`. |
+1. Obtain a valid WireGuard client configuration from your VPN server administrator or your own server.
+2. Confirm that the endpoint is reachable and that the server peer has the correct public key, allowed IPs and routing.
+3. Import the profile into PhoneKey23.
+4. Approve the Android VPN permission dialog.
+5. Connect and verify a recent WireGuard handshake and traffic through the server.
 
-`VpnEngine` is the extension point. `EngineFactory` still returns the refusing engines so a stale profile cannot open a tunnel by accident.
+A profile can be imported without a server being reachable, but that does not mean a tunnel can connect. An endpoint that is a placeholder or documentation address is rejected.
 
 ## Kill switch
 
-The setting reconnects a dropped WireGuard session up to three times. If the VPN service is still running, PhoneKey also calls `VpnService.Builder.establish()` with routes for all IPv4 and IPv6 and no app forwarding. Packets that enter that interface are not sent anywhere. The interface is released on disconnect or when the process dies.
+The in-app setting retries a dropped WireGuard session and can hold a no-forwarding VPN interface while the app process remains alive. This is not a reboot-safe or force-stop-safe kill switch. For a persistent system-level block, set PhoneKey23 as **Always-on VPN** and enable **Block connections without VPN** in Android system VPN settings.
 
-That is not a reboot-safe kill switch. Android tears the interface down with the process. For a durable block, Settings has **Open system VPN settings**. Set PhoneKey as Always-on VPN and enable “Block connections without VPN”.
+## Key storage
 
-## Keys
-
-`ProfileCipher` seals each profile’s config text with AES-GCM. The key is generated in the Android Keystore (`phonekey.profile.v1`) and is not written to `profiles.json`. Older plaintext files are sealed on the next read. Backup is disabled, so a reinstall loses the keystore key and cannot decrypt an old file copied by hand.
+Profile config text is sealed with AES-GCM using a key generated in Android Keystore. The key is not stored in `profiles.json`. Backup/device transfer is disabled. Reinstalling the app can make old encrypted profile data unrecoverable; export profiles securely before reinstalling or changing devices.
 
 ## Split tunneling
 
-Launcher-visible apps are listed without `QUERY_ALL_PACKAGES`. Search and multi-select are in Settings. Package names can still be typed. “Only selected apps use the VPN” writes `AllowedApplications`. Off, the same list is `ExcludedApplications`. The two keys are never written together.
+The app supports Android allowed/excluded application lists. Validate this behavior on a physical device with the actual profile and traffic; UI selection alone is not proof that packets are routed as intended.
 
 ## Permissions
 
-| Permission | Why |
+| Permission | Purpose |
 | --- | --- |
-| `INTERNET`, `ACCESS_NETWORK_STATE` | The tunnel and a DNS check of the endpoint host. |
-| `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SPECIAL_USE` | The ongoing VPN notification on API 34+. The public SDK this project compiles against does not accept `foregroundServiceType="vpn"`, so the service is `specialUse` with subtype `vpn`. It is still a `VpnService`. |
-| `POST_NOTIFICATIONS` | Asked when the main screen first opens, so the status notification can be posted. |
-| `RECEIVE_BOOT_COMPLETED` | Auto-connect on boot, only if that setting is on. |
-| `WAKE_LOCK` | A short partial wake lock while connect runs. |
-| `CAMERA` | Asked only when the QR scanner is opened. The feature is optional. |
+| `INTERNET`, `ACCESS_NETWORK_STATE` | Tunnel operation and endpoint checks |
+| `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SPECIAL_USE` | Foreground VPN service and ongoing notification |
+| `POST_NOTIFICATIONS` | VPN status notification |
+| `RECEIVE_BOOT_COMPLETED` | Optional boot auto-connect |
+| `WAKE_LOCK` | Short wake lock during connection setup |
+| `CAMERA` | Optional QR scanning |
 
-The VPN service is guarded by `BIND_VPN_SERVICE`. The first connect calls `VpnService.prepare()`.
+The VPN service is guarded by `BIND_VPN_SERVICE`; Android's `VpnService.prepare()` consent flow must be completed before connecting. The service currently declares the `specialUse` foreground-service subtype `vpn`; this declaration and distribution-policy compliance must be reviewed against the target Android versions and chosen distribution channel.
 
-## Open in Android Studio
+## Build and test
 
-Android Studio Ladybug or newer. JDK 17.
-
-1. Open the `phonekey` directory (the folder that contains `settings.gradle.kts`).
-2. Let Gradle sync.
-3. Run `app` on API 26 or higher.
+Open this `phonekey` directory in Android Studio with JDK 17, or run:
 
 ```bash
 ./gradlew :core:test
+./gradlew :app:testDebugUnitTest
 ./gradlew :app:assembleDebug
 ```
 
-`:core:test` is plain JVM and covers WireGuard parsing, the documentation-endpoint refusal, Xray/SSTP refusal, the profile-list codec, and settings decoding. `ConnectFlowTest` is an instrumented Compose test. CI runs it on an API 30 emulator (`connectedDebugAndroidTest`).
+CI runs core unit tests, web checks, Compose instrumented UI tests on an API 30 emulator, and Android unit tests before generating the debug APK artifact.
 
-Release signing reads `KEYSTORE_FILE`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, and `KEY_PASSWORD` from the environment. Without them, `assembleRelease` is unsigned and CI publishes the debug APK. The workflow installs platform 35 with the runner’s `sdkmanager`. It does not use `android-actions/setup-android`, which fails while installing the removed `tools` package.
+## Signed GitHub Releases
 
-## Layout
+Version tags (`v*`) publish only after all required test/build jobs pass. The release workflow requires these GitHub Actions secrets:
+
+- `KEYSTORE_BASE64`
+- `KEYSTORE_PASSWORD`
+- `KEY_ALIAS`
+- `KEY_PASSWORD`
+
+It creates a signed `PhoneKey23-release.apk`, a source archive and `SHA256SUMS.txt`. A release tag fails closed if signing secrets are missing; a debug APK is never substituted as a production release.
+
+Keep the signing keystore and passwords private and backed up securely. Do not commit them to the repository.
+
+## Project layout
 
 ```text
 core/                          JVM module: parser, models, policy, codecs, unit tests
@@ -78,16 +80,8 @@ app/src/main/java/com/phonekey/vpn/
   MainActivity.kt              launcher
   ActivateActivity.kt          deep links
   PhoneKeyApp.kt               process start, notification channel
-  data/store                   DataStore settings, encrypted profiles, installed-app list
-  data/vpn                     WireGuardEngine, refusing Xray/SSTP engines, VpnRepository
-  service/                     VpnService, tile, boot receiver, notification actions
+  data/store                   DataStore settings, encrypted profiles
+  data/vpn                     WireGuard engine and VPN repository
+  service/                     VPN service, tile, boot receiver, notification actions
   ui/                          Compose screens
 ```
-
-## Libraries
-
-AndroidX (core, lifecycle, activity, Compose, navigation, DataStore), Kotlin coroutines, `com.wireguard.android:tunnel`, ZXing Android Embedded 4.3.0, and Gson. Endpoint checks use `InetAddress`, not a HTTP client. All of those are free and open source.
-
-## Not included
-
-No Google Mobile Ads, Facebook, Unity Ads, ironSource, Vungle, AppLovin, Play Billing, Firebase, Crashlytics, analytics, or attribution. No `AD_ID`, no `ACCESS_ADSERVICES_*`, no `QUERY_ALL_PACKAGES`, no `READ_BASIC_PHONE_STATE`, no `WRITE_EXTERNAL_STORAGE`, no `DUMP`.
