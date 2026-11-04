@@ -1,81 +1,66 @@
-# PhoneKey
+# PhoneKey23
 
-PhoneKey is a free, privacy-first WireGuard client for Android, plus a web companion for managing configs on this device. There is no account, no subscription, no ad SDK, and no analytics SDK.
+PhoneKey23 is an Android WireGuard VPN client with a separate browser-based profile companion. The **actual VPN tunnel runs only in the Android app**. The website cannot create an Android `VpnService`, establish a WireGuard tunnel, change your public IP, or protect device traffic.
 
-Live site: [tajoor621.github.io/PhoneKey23](https://tajoor621.github.io/PhoneKey23/)
-
-Profile: [tajoor621.github.io](https://tajoor621.github.io/)
+- Android package: `com.phonekey.vpn`
+- Android minimum: API 26 (Android 8.0)
+- Build: Kotlin, Jetpack Compose, JDK 17
+- Website: [PhoneKey23 project page](https://tajoor621.github.io/PhoneKey23/)
+- APK releases: [GitHub Releases](https://github.com/Tajoor621/PhoneKey23/releases)
 
 ## Protocol status
 
-| Protocol | Status |
+| Protocol | Android status |
 | --- | --- |
-| WireGuard | Production path. The Android app builds the tunnel with `com.wireguard.android:tunnel` (`GoBackend`). |
-| Xray / V2Ray | Not implemented. Import and connect are refused. |
-| SSTP | Not implemented. Import and connect are refused. |
+| WireGuard | Implemented through the WireGuard GoBackend. Requires your own working server and a valid WireGuard profile. |
+| Xray / V2Ray | Not implemented; rejected rather than falsely reporting a connection. |
+| SSTP | Not implemented; rejected rather than falsely reporting a connection. |
 
-PhoneKey does not ship a VPN server. You bring your own WireGuard endpoint. Documentation addresses (`203.0.113.0/24`, `192.0.2.0/24`, `198.51.100.0/24`, `example`, `.test`, `.invalid`) are rejected so they cannot be saved or connected.
+PhoneKey23 does not provide a VPN server, subscription, account, or hosted endpoint. If you do not already have a WireGuard server, you must obtain or deploy one before a real VPN connection can be tested. Documentation-only IP ranges and placeholder endpoints are rejected.
 
-## Android project
+## Download and install
 
-Package `com.phonekey.vpn`. Kotlin, Jetpack Compose, Material 3. `minSdk` 26, `targetSdk` 35, `compileSdk` 35. JDK 17. Android Studio Ladybug or newer.
+1. Open [GitHub Releases](https://github.com/Tajoor621/PhoneKey23/releases).
+2. Download the APK attached to the latest release. Prefer the signed `PhoneKey23-release.apk` asset.
+3. Install it on Android. If Android reports that an existing app cannot be updated, check that the installed app has the same package ID and signing certificate; do not uninstall or clear app data until you have backed up any profiles.
+4. Open PhoneKey23, import a valid WireGuard `.conf` or scan its QR code, approve Android's VPN permission prompt, and connect.
 
-1. Download the project from Settings in the web companion, from [the source zip](https://github.com/Tajoor621/PhoneKey23/raw/main/public/phonekey-source.zip), or clone this repo and open the `phonekey` directory.
-2. Let Gradle sync. The wrapper uses Gradle 8.11.1 and Android Gradle Plugin 8.7.3.
-3. Run the `app` configuration on a device or emulator, API 26 or higher.
+The website is a companion and documentation page, not a browser VPN. The browser companion can manage/test profile UI, but any browser-side session preview is simulated and does not route traffic.
 
-From a shell, with the Android SDK installed:
+## Build Android locally
+
+Open the `phonekey` directory in Android Studio with JDK 17, or run:
 
 ```bash
 cd phonekey
 ./gradlew :core:test
+./gradlew :app:testDebugUnitTest
 ./gradlew :app:assembleDebug
 ```
 
-The debug APK is built on every push by GitHub Actions. A tag `v*` publishes that APK, plus a signed release APK when the `KEYSTORE_BASE64`, `KEYSTORE_PASSWORD`, `KEY_ALIAS`, and `KEY_PASSWORD` repository secrets are set. `v1.0.0` never published an APK: the workflow used an Android setup action that tried to install a removed SDK package. `v1.0.1` did not compile: the OkHttp DNS lambda, a non-boolean `when` branch, a missing notification string, and an experimental font API failed the build. `v1.0.2` is the first tag after those errors were fixed. See [phonekey/README.md](phonekey/README.md) for permissions, the kill switch, and key storage.
+The GitHub Actions pipeline runs core tests, web typecheck/tests/build, Android Compose UI tests on an emulator, and Android unit tests before the debug APK artifact is produced. Version tags publish a **signed release APK only** after all required jobs pass and all signing secrets are present.
 
-## Web companion
+Required GitHub Actions secrets for signed releases:
 
-The site in this repository is a Vite + React companion. It stores WireGuard profiles in the browser and simulates a session so the interface can be tried without a tunnel. It does not route traffic.
+- `KEYSTORE_BASE64`
+- `KEYSTORE_PASSWORD`
+- `KEY_ALIAS`
+- `KEY_PASSWORD`
 
-```bash
-npm install
-npm run dev
-```
+The signing keystore must be securely retained by the owner. Losing it can prevent future in-place updates for users with the existing app installed. Never commit the keystore or passwords.
 
-`npm run typecheck` and `npm run build` check the companion. The companion is not the GitHub Pages site. Pages serves the static page in `docs/`.
+## Android security and behavior
 
-## What stays on the device
-
-- WireGuard private keys in the Android app are encrypted with an AES key that lives in the Android Keystore. `profiles.json` holds ciphertext, not the keystore key.
+- WireGuard private-key profile data is encrypted using AES-GCM with a key held in Android Keystore.
 - Backup and device transfer of app data are disabled.
-- The camera permission is requested only when you open the QR scanner.
-- Split tunneling lists launcher-visible apps. It does not request `QUERY_ALL_PACKAGES`. You can still type a package name.
+- Camera access is requested only when the QR scanner is opened.
+- Split tunneling uses the Android app/package controls described in the Android project documentation.
+- The in-app kill-switch behavior is process-lifetime limited. For a persistent block, enable PhoneKey as Android Always-on VPN and turn on **Block connections without VPN** in system VPN settings.
 
-## Kill switch
+## Website
 
-The in-app switch reconnects a dropped WireGuard session a few times. While the process is alive it can also hold a tunnel that forwards nothing. That block ends if the process dies. For a block that survives a reboot or a force-stop, open system VPN settings from the Android Settings screen and enable Always-on VPN plus “Block connections without VPN”.
-
-## Deep links
-
-- `phonekey://activate`
-- `https://tajoor621.github.io/PhoneKey23/activate`
-
-Both open a welcome screen. There is no license check.
-
-## Policy
-
-No Google Mobile Ads, Facebook, Unity Ads, ironSource, Vungle, AppLovin, billing, Firebase, Crashlytics, or attribution. No `AD_ID`. No telemetry.
+The GitHub Pages site under `docs/` provides project information and links to GitHub Releases. The React companion is a separate browser-based profile manager; it does not have access to Android's VPN service.
 
 ## License
 
-[Apache License 2.0](LICENSE). WireGuard’s tunnel library is also Apache-2.0.
-
-## Contributing
-
-Issues and pull requests are welcome on [Tajoor621/PhoneKey23](https://github.com/Tajoor621/PhoneKey23).
-
-- Do not add ad, analytics, billing, or tracking dependencies.
-- Do not claim Xray or SSTP work until an engine actually connects.
-- Keep parser changes covered by `:core:test`.
-- UI copy should say when a control is Android-only or when speeds are simulated.
+[Apache License 2.0](LICENSE). The WireGuard tunnel library is also Apache-2.0.
