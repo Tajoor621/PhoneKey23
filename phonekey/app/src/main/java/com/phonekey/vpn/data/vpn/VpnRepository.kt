@@ -148,6 +148,15 @@ class VpnRepository(
                     includeOnly = prefs.splitIncludeOnly,
                 ),
             )
+            _session.update {
+                it.copy(message = "Tunnel interface is up. Waiting for a WireGuard peer handshake…")
+            }
+            if (!engine.awaitConnection(timeoutMillis = 25_000L)) {
+                throw IllegalStateException(
+                    "WireGuard started, but no peer handshake was confirmed within 25 seconds. " +
+                        "Check the server endpoint, peer keys, UDP port, and server status.",
+                )
+            }
             activeEngine = engine
             ignoreDown = false
             reconnects = 0
