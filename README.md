@@ -1,31 +1,52 @@
 # PhoneKey23
 
-PhoneKey23 is an Android WireGuard VPN client with a separate browser-based profile companion. The **actual VPN tunnel runs only in the Android app**. The website cannot create an Android `VpnService`, establish a WireGuard tunnel, change your public IP, or protect device traffic.
+**Chaabi jo aapko Jorhy Apno sy.** The key that joins you with your own.
+
+PhoneKey23 is a native Android WireGuard VPN client. It is free software: no ads, no subscription, no account, and no tracking. You bring your own WireGuard server. The app does not include one.
+
+**This website does not connect a VPN.** The page at [tajoor621.github.io/PhoneKey23](https://tajoor621.github.io/PhoneKey23/) is a project and download page. It cannot create an Android `VpnService`, change your public IP, or protect device traffic. A tunnel starts only in the installed Android app, after you approve Android’s VPN permission and import a valid WireGuard profile.
 
 - Android package: `com.phonekey.vpn`
-- Android minimum: API 26 (Android 8.0)
+- In-app name: PhoneKey
+- Android minimum: API 26 (Android 8.0), target API 35
+- Current version name: 1.0.2
 - Build: Kotlin, Jetpack Compose, JDK 17
-- Website: [PhoneKey23 project page](https://tajoor621.github.io/PhoneKey23/)
-- APK releases: [GitHub Releases](https://github.com/Tajoor621/PhoneKey23/releases)
+- Project page: [PhoneKey23](https://tajoor621.github.io/PhoneKey23/)
+- APK and source archive: [GitHub Releases](https://github.com/Tajoor621/PhoneKey23/releases)
 
 ## Protocol status
 
 | Protocol | Android status |
 | --- | --- |
-| WireGuard | Implemented through the WireGuard GoBackend. Requires your own working server and a valid WireGuard profile. |
-| Xray / V2Ray | Not implemented; rejected rather than falsely reporting a connection. |
-| SSTP | Not implemented; rejected rather than falsely reporting a connection. |
+| WireGuard | Implemented through the WireGuard GoBackend. The app reports connected only after a peer handshake. Requires your own working server and a valid profile. |
+| Xray / V2Ray | Not implemented. Import and connect are rejected rather than reported as a connection. |
+| SSTP | Not implemented. Import and connect are rejected rather than reported as a connection. |
 
-PhoneKey23 does not provide a VPN server, subscription, account, or hosted endpoint. If you do not already have a WireGuard server, you must obtain or deploy one before a real VPN connection can be tested. Documentation-only IP ranges and placeholder endpoints are rejected.
+Documentation hosts (`example.com`, `.invalid`, `.test`, and the documentation IP ranges) are rejected. PhoneKey23 does not provide a VPN server, subscription, account, or hosted endpoint.
+
+## What the Android app does
+
+- Foreground `VpnService` (`PhoneKeyVpnService`) driven by WireGuard `GoBackend`.
+- Profile import from a `.conf` file, a QR code, or a manual form. Edit, select, delete, show a QR, and export or import a JSON profile list.
+- QR codes and JSON exports include private keys. Treat them as secrets.
+- Session time, upload and download rates, and byte totals while a handshake is up.
+- Notification actions, a Quick Settings tile, and optional auto-connect on launch or after boot (boot connect only if VPN permission was already granted).
+- Split tunneling by Android package: selected apps bypass the tunnel, or only selected apps use it.
+- Profile text sealed with AES-GCM. The key is held in Android Keystore and is not stored in the profile file. Backup and device transfer are disabled.
+- An in-app kill switch that retries a dropped session and can hold a non-forwarding interface only while the app process is alive.
+
+The in-app kill switch is not reboot-safe and not force-stop-safe. For a persistent block, set PhoneKey as Android **Always-on VPN** and enable **Block connections without VPN** in system VPN settings.
+
+Camera permission is requested only when the QR scanner is opened.
+
+Technical layout, permissions, and the kill-switch limit are also written in [phonekey/README.md](phonekey/README.md).
 
 ## Download and install
 
 1. Open [GitHub Releases](https://github.com/Tajoor621/PhoneKey23/releases).
-2. Download the APK attached to the latest release. Prefer the signed `PhoneKey23-release.apk` asset.
-3. Install it on Android. If Android reports that an existing app cannot be updated, check that the installed app has the same package ID and signing certificate; do not uninstall or clear app data until you have backed up any profiles.
-4. Open PhoneKey23, import a valid WireGuard `.conf` or scan its QR code, approve Android's VPN permission prompt, and connect.
-
-The website is a companion and documentation page, not a browser VPN. The browser companion can manage/test profile UI, but any browser-side session preview is simulated and does not route traffic.
+2. The current tag, [v1.0.2](https://github.com/Tajoor621/PhoneKey23/releases/tag/v1.0.2), attaches `app-debug.apk` (debug-signed, for installation and testing) and `phonekey-source.zip`. It is not a Play Store build. A signed `PhoneKey23-release.apk` is published only when the release signing secrets are present.
+3. Install the APK on Android 8.0 or newer. Android accepts an update only when the package id and signing certificate both match. A later release-signed APK will not install over this debug build. Do not uninstall or clear app data until you have exported your profiles: Keystore-encrypted data can become unrecoverable.
+4. Open PhoneKey, import a valid WireGuard `.conf` or scan its QR code, approve the VPN permission, and connect. “Connected” means a peer handshake was confirmed. If none arrives within 25 seconds, the app stays disconnected.
 
 ## Build Android locally
 
@@ -38,7 +59,7 @@ cd phonekey
 ./gradlew :app:assembleDebug
 ```
 
-The GitHub Actions pipeline runs core tests, web typecheck/tests/build, Android Compose UI tests on an emulator, and Android unit tests before the debug APK artifact is produced. Version tags publish a **signed release APK only** after all required jobs pass and all signing secrets are present.
+GitHub Actions runs core unit tests, web typecheck/tests/build, and Android unit tests before uploading the debug APK artifact. Instrumented Compose UI tests run on an API 30 emulator. A version tag (`v*`) publishes a **signed release APK only after** the core, web, emulator, and debug jobs pass and every signing secret is present. If a signing secret is missing, the release job fails closed. A debug APK is not substituted as that production asset.
 
 Required GitHub Actions secrets for signed releases:
 
@@ -47,19 +68,19 @@ Required GitHub Actions secrets for signed releases:
 - `KEY_ALIAS`
 - `KEY_PASSWORD`
 
-The signing keystore must be securely retained by the owner. Losing it can prevent future in-place updates for users with the existing app installed. Never commit the keystore or passwords.
+Keep the keystore and passwords private and backed up. Losing the keystore blocks in-place updates for anyone who installed a build signed with it. Never commit the keystore or the passwords.
 
-## Android security and behavior
+## Repository map
 
-- WireGuard private-key profile data is encrypted using AES-GCM with a key held in Android Keystore.
-- Backup and device transfer of app data are disabled.
-- Camera access is requested only when the QR scanner is opened.
-- Split tunneling uses the Android app/package controls described in the Android project documentation.
-- The in-app kill-switch behavior is process-lifetime limited. For a persistent block, enable PhoneKey as Android Always-on VPN and turn on **Block connections without VPN** in system VPN settings.
+```text
+phonekey/     Android app and JVM core (parser, policy, tests)
+docs/         GitHub Pages project site. Information and download only.
+src/          Browser profile companion. It does not route traffic.
+```
 
-## Website
+The browser companion can exercise profile import and settings UI. Speeds shown there are simulated. It has no access to Android’s VPN service.
 
-The GitHub Pages site under `docs/` provides project information and links to GitHub Releases. The React companion is a separate browser-based profile manager; it does not have access to Android's VPN service.
+The Pages site under `docs/` is the public project page: [https://tajoor621.github.io/PhoneKey23/](https://tajoor621.github.io/PhoneKey23/). The `/activate/` path is only a handoff into `phonekey://activate` when the app is installed. It does not connect a tunnel. Fonts on that site are the same files shipped in the Android app, so the page does not call a third-party font host.
 
 ## License
 

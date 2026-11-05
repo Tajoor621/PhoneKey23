@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+Disallow: /activate/
+
+Sitemap: https://tajoor621.github.io/PhoneKey23/sitemap.xml

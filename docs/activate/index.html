@@ -3,26 +3,48 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>PhoneKey is free</title>
-  <link rel="preconnect" href="https://fonts.googleapis.com" />
-  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,560&family=Outfit:wght@400;600&display=swap" rel="stylesheet" />
-  <style>
-    :root { color-scheme: dark; --canvas: #10140f; --fg: #f3f0e7; --muted: #a8ad9f; --brass: #e0b15a; --ink: #1a1408; }
-    body { margin: 0; background: var(--canvas); color: var(--fg); font-family: Outfit, ui-sans-serif, system-ui, sans-serif; }
-    main { max-width: 36rem; margin: 0 auto; padding: 4rem 1.5rem; }
-    h1 { font-family: Fraunces, ui-serif, Georgia, serif; font-size: 2.5rem; line-height: 1.1; font-weight: 560; }
-    p { color: var(--muted); font-size: 1.125rem; line-height: 1.5; }
-    a.btn { display: flex; align-items: center; justify-content: center; height: 3rem; margin-top: 1rem; border-radius: 1rem; background: var(--brass); color: var(--ink); font-weight: 600; text-decoration: none; }
-    a.quiet { color: var(--brass); }
-  </style>
+  <title>Open PhoneKey23 on Android</title>
+  <meta name="description" content="Hand off to the PhoneKey23 Android app. This page does not connect a VPN. PhoneKey is free: no ads, no subscription, no account." />
+  <link rel="canonical" href="https://tajoor621.github.io/PhoneKey23/activate/" />
+  <meta name="robots" content="noindex,follow" />
+  <meta name="theme-color" content="#10140f" />
+  <link rel="icon" href="../favicon.svg" type="image/svg+xml" />
+  <link rel="stylesheet" href="../site.css" />
+  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'self'; font-src 'self'; img-src 'self'; base-uri 'none'; form-action 'none'" />
 </head>
 <body>
-  <main>
+  <a class="skip" href="#content">Skip to content</a>
+  <header class="site-header">
+    <div class="wrap">
+      <a class="wordmark" href="../">
+        <svg viewBox="0 0 32 32" aria-hidden="true">
+          <rect width="32" height="32" rx="7" fill="#1C241A"/>
+          <circle cx="16" cy="9.6" r="4.6" fill="none" stroke="#E0B15A" stroke-width="2.6"/>
+          <rect x="14.55" y="13.4" width="2.9" height="13.2" rx="0.5" fill="#E0B15A"/>
+          <rect x="17.2" y="19.2" width="4.4" height="2.15" rx="0.35" fill="#E0B15A"/>
+          <rect x="17.2" y="23.1" width="3.1" height="2.15" rx="0.35" fill="#E0B15A"/>
+        </svg>
+        PhoneKey23
+      </a>
+      <nav class="nav" aria-label="Project">
+        <a href="../">Project page</a>
+        <a href="https://github.com/Tajoor621/PhoneKey23/releases/tag/v1.0.2">Download</a>
+      </nav>
+    </div>
+  </header>
+  <main id="content" class="wrap narrow" tabindex="-1">
+    <p class="kicker">App handoff · not a connection</p>
     <h1>PhoneKey is free. No ads. No subscriptions.</h1>
-    <p>No accounts and no license check. Your WireGuard keys stay on the phone. Xray and SSTP are not implemented.</p>
-    <a class="btn" href="phonekey://activate">Open in the app</a>
-    <p><a class="quiet" href="../">Back to PhoneKey</a></p>
+    <p class="lede">No accounts and no license check. Your WireGuard keys stay on the phone. Xray and SSTP are not implemented.</p>
+    <aside class="notice">
+      <strong>This page does not connect a VPN.</strong>
+      <p>If PhoneKey23 is installed, the button opens the app. The tunnel still starts only after you choose a WireGuard profile and approve Android’s VPN permission. If the app is not installed, download the APK from GitHub Releases.</p>
+    </aside>
+    <div class="actions">
+      <a class="button" href="phonekey://activate">Open in the app</a>
+      <a class="button secondary" href="https://github.com/Tajoor621/PhoneKey23/releases/tag/v1.0.2">Get the APK</a>
+    </div>
+    <p class="caption"><a href="../">Back to the project page</a></p>
   </main>
 </body>
 </html>

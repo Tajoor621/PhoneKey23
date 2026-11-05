@@ -2,6 +2,8 @@
 
 Native Android WireGuard client. Package: `com.phonekey.vpn`. JDK 17, Kotlin, Jetpack Compose, `minSdk 26`, `targetSdk 35`, `compileSdk 35`.
 
+Project page, which does not itself connect a VPN: [https://tajoor621.github.io/PhoneKey23/](https://tajoor621.github.io/PhoneKey23/). The line on the repository is **Chaabi jo aapko Jorhy Apno sy** — the key that joins you with your own.
+
 **A real connection requires a working WireGuard server and a valid profile.** PhoneKey23 does not include or host a VPN server. The GitHub Pages website is not a VPN client; only this native Android app can request Android VPN permission and establish the system tunnel.
 
 ## Android capabilities
