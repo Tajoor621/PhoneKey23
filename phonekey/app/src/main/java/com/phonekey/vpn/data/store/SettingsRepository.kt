@@ -8,6 +8,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.core.stringSetPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
+import com.phonekey.vpn.domain.SettingsSource
 import com.phonekey.vpn.domain.model.AppSettings
 import com.phonekey.vpn.domain.model.SettingsCodec
 import kotlinx.coroutines.flow.Flow
@@ -16,12 +17,12 @@ import kotlinx.coroutines.flow.map
 
 private val Context.settingsStore by preferencesDataStore(name = "phonekey_settings")
 
-class SettingsRepository(context: Context) {
+class SettingsRepository(context: Context) : SettingsSource {
     private val store = context.applicationContext.settingsStore
 
     val settings: Flow<AppSettings> = store.data.map { it.toSettings() }
 
-    suspend fun snapshot(): AppSettings = settings.first()
+    override suspend fun snapshot(): AppSettings = settings.first()
 
     suspend fun update(transform: (AppSettings) -> AppSettings) {
         store.edit { prefs ->

@@ -10,6 +10,9 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.safeDrawing
+import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.Button
@@ -23,8 +26,10 @@ import androidx.compose.ui.unit.dp
 import com.phonekey.vpn.ui.theme.PhoneKeyTheme
 
 /**
- * Deep link landing for `phonekey://activate` and
- * `https://tajoor621.github.io/PhoneKey23/activate`.
+ * Deep link landing for `phonekey://activate` only.
+ * The https page on GitHub Pages is a handoff into that custom scheme.
+ * It is not an Android App Link: there is no autoVerify and no assetlinks.json,
+ * because this build must not depend on a verified association with the Pages host.
  * There is no license, account, or payment step.
  */
 class ActivateActivity : ComponentActivity() {
@@ -50,6 +55,7 @@ private fun ActivateScreen(onContinue: () -> Unit) {
         Column(
             modifier = Modifier
                 .fillMaxSize()
+                .windowInsetsPadding(WindowInsets.safeDrawing)
                 .padding(horizontal = 28.dp, vertical = 32.dp),
             verticalArrangement = Arrangement.Center,
         ) {

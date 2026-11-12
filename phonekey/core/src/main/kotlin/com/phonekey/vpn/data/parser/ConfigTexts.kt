@@ -112,14 +112,18 @@ object ConfigTexts {
     }
 
     /**
-     * Writes AllowedApplications (include-only) or ExcludedApplications (bypass)
-     * and removes the opposite key so the two lists cannot both apply.
+     * Writes IncludedApplications (include-only) or ExcludedApplications (bypass).
+     * Those are the keys com.wireguard.config.Interface parses (verified on
+     * tunnel 1.0.20260102). AllowedApplications is not a parsed key and is removed.
      */
     fun withApplicationFilter(configText: String, packages: List<String>, includeOnly: Boolean): String {
         val cleaned = packages.map { it.trim() }.filter { it.isNotEmpty() }.distinct()
-        val keep = if (includeOnly) "AllowedApplications" else "ExcludedApplications"
-        val drop = if (includeOnly) "ExcludedApplications" else "AllowedApplications"
-        var text = Regex("(?im)^$drop\\s*=.*(?:\\R)?").replace(configText, "")
+        val keep = if (includeOnly) "IncludedApplications" else "ExcludedApplications"
+        val drop = if (includeOnly) "ExcludedApplications" else "IncludedApplications"
+        var text = configText
+        for (legacy in listOf(drop, "AllowedApplications")) {
+            text = Regex("(?im)^$legacy\\s*=.*(?:\\R)?").replace(text, "")
+        }
         if (cleaned.isEmpty()) {
             return Regex("(?im)^$keep\\s*=.*(?:\\R)?").replace(text, "")
         }
@@ -129,6 +133,11 @@ object ConfigTexts {
         val interfaceHeader = Regex("(?im)^\\[Interface]\\s*$")
         if (!interfaceHeader.containsMatchIn(text)) return text
         return interfaceHeader.replace(text) { "${it.value}\n$line" }
+    }
+
+    fun peerPublicKey(configText: String): String? {
+        val peer = parseSections(configText).firstOrNull { it.name.equals("Peer", ignoreCase = true) } ?: return null
+        return peer.value("PublicKey")?.trim()?.ifBlank { null }
     }
 
     private fun importWireGuard(raw: String, suggestedName: String?): Result<VpnProfile> {

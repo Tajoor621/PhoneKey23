@@ -68,7 +68,6 @@ export function isDocumentationEndpoint(endpoint: string | null | undefined): bo
   }
   host = host.toLowerCase();
   if (
-    host === "localhost" ||
     host === "example" ||
     host.endsWith(".example") ||
     host.endsWith(".invalid") ||
@@ -198,6 +197,69 @@ function endpointLooksValid(endpoint: string): boolean {
 function cleanName(value?: string | null): string | null {
   const trimmed = value?.trim();
   return trimmed ? trimmed : null;
+}
+
+export function peerPublicKey(configText: string): string | null {
+  const peer = parseSections(configText).find((section) => section.name.toLowerCase() === "peer");
+  const key = peer?.value("PublicKey")?.trim();
+  return key ? key : null;
+}
+
+export interface BundleImportReport {
+  profiles: VpnProfile[];
+  imported: number;
+  skipped: number;
+  failed: number;
+}
+
+/** New id for every accepted profile. A matching WireGuard public key is skipped, never replaced. */
+export function importProfileBundle(text: string, existingPublicKeys: Iterable<string>): BundleImportReport {
+  if (new TextEncoder().encode(text).length > MAX_BYTES) {
+    throw new Error("Config is larger than 1 MB.");
+  }
+  let root: { phonekey?: unknown; profiles?: unknown };
+  try {
+    root = JSON.parse(text) as { phonekey?: unknown; profiles?: unknown };
+  } catch {
+    throw new Error("That file is not a PhoneKey profile export.");
+  }
+  if (root.phonekey !== 1 || !Array.isArray(root.profiles)) {
+    throw new Error("That file is not a PhoneKey profile export.");
+  }
+  const seen = new Set(
+    [...existingPublicKeys].map((key) => key.trim()).filter((key) => key.length > 0),
+  );
+  const profiles: VpnProfile[] = [];
+  let skipped = 0;
+  let failed = 0;
+  for (const item of root.profiles) {
+    if (!item || typeof item !== "object") {
+      failed += 1;
+      continue;
+    }
+    const record = item as { rawConfig?: unknown; name?: unknown };
+    if (typeof record.rawConfig !== "string" || !record.rawConfig.trim()) {
+      failed += 1;
+      continue;
+    }
+    const suggested = typeof record.name === "string" ? record.name : null;
+    try {
+      const profile = importConfig(record.rawConfig, suggested);
+      const key = peerPublicKey(profile.rawConfig);
+      if (key && seen.has(key)) {
+        skipped += 1;
+        continue;
+      }
+      if (key) seen.add(key);
+      profiles.push(profile);
+    } catch {
+      failed += 1;
+    }
+  }
+  if (profiles.length === 0 && skipped === 0) {
+    throw new Error("Nothing in that file could be imported.");
+  }
+  return { profiles, imported: profiles.length, skipped, failed };
 }
 
 function makeProfile(input: Omit<VpnProfile, "id" | "createdAt" | "updatedAt">): VpnProfile {

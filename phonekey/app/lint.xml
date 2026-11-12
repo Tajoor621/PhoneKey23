@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<lint>
+    <!--
+      No blanket suppressions. Add a rule here only when a warning is reviewed
+      and still wrong for this app, and say why in the comment.
+    -->
+</lint>

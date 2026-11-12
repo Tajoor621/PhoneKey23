@@ -65,6 +65,9 @@ fun PhoneKeyRoot(connectTick: Int = 0, vm: PhoneKeyViewModel = viewModel()) {
         val snackbar = remember { SnackbarHostState() }
         val session by vm.session.collectAsStateWithLifecycle()
         val profiles by vm.profiles.collectAsStateWithLifecycle()
+        val broken by vm.brokenProfiles.collectAsStateWithLifecycle()
+        val profilesLoading by vm.profilesLoading.collectAsStateWithLifecycle()
+        val profileError by vm.profileError.collectAsStateWithLifecycle()
         val settings by vm.settings.collectAsStateWithLifecycle()
         val selected by vm.selected.collectAsStateWithLifecycle()
         val backStack by nav.currentBackStackEntryAsState()
@@ -191,6 +194,15 @@ fun PhoneKeyRoot(connectTick: Int = 0, vm: PhoneKeyViewModel = viewModel()) {
                     HomeScreen(
                         session = session,
                         selected = selected,
+                        profileNotice = when {
+                            profilesLoading -> "Loading profiles…"
+                            broken.isNotEmpty() ->
+                                "Could not open ${broken.size} profile(s): " +
+                                    broken.joinToString { it.name } +
+                                    ". The encrypted file was kept."
+                            !profileError.isNullOrBlank() -> profileError
+                            else -> null
+                        },
                         onToggle = {
                             if (session.status == TunnelStatus.CONNECTED || session.status == TunnelStatus.CONNECTING) {
                                 vm.disconnect()

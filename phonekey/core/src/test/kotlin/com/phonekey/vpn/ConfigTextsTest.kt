@@ -11,6 +11,7 @@ import com.phonekey.vpn.domain.model.VpnProfile
 import kotlin.test.Test
 import kotlin.test.assertEquals
 import kotlin.test.assertFailsWith
+import kotlin.test.assertNotEquals
 import kotlin.test.assertNull
 import kotlin.test.assertTrue
 
@@ -53,6 +54,16 @@ class ConfigTextsTest {
         assertTrue(ProtocolPolicy.isDocumentationEndpoint("203.0.113.1:51820"))
         assertTrue(ProtocolPolicy.isDocumentationEndpoint("192.0.2.10:1"))
         assertTrue(ProtocolPolicy.isDocumentationEndpoint("vpn.example.net:51820"))
+        assertTrue(!ProtocolPolicy.isDocumentationEndpoint("localhost:51820"))
+        assertTrue(!ProtocolPolicy.isDocumentationEndpoint("127.0.0.1:51820"))
+    }
+
+    @Test
+    fun localhostIsARealEndpoint() {
+        val local = valid.replace("wg.internal.lan:51820", "localhost:51820")
+        val profile = ConfigTexts.import(local, "Local").getOrThrow()
+        assertEquals("localhost:51820", profile.endpoint)
+        assertNull(ProtocolPolicy.connectBlockReason(profile))
     }
 
     @Test
@@ -92,8 +103,9 @@ class ConfigTextsTest {
         val excluded = ConfigTexts.withApplicationFilter(valid, listOf("com.example.a"), includeOnly = false)
         assertTrue(excluded.contains("ExcludedApplications = com.example.a"))
         val included = ConfigTexts.withApplicationFilter(excluded, listOf("com.example.b"), includeOnly = true)
-        assertTrue(included.contains("AllowedApplications = com.example.b"))
+        assertTrue(included.contains("IncludedApplications = com.example.b"))
         assertTrue(!included.contains("ExcludedApplications"))
+        assertTrue(!included.contains("AllowedApplications"))
     }
 }
 
@@ -124,13 +136,62 @@ class BundleCodecTest {
             "Office",
         ).getOrThrow()
         val exported = BundleCodec.export(listOf(usable))
-        val imported = BundleCodec.import(exported).getOrThrow()
-        assertEquals(1, imported.size)
-        assertEquals(usable.id, imported[0].id)
-        assertEquals("Office", imported[0].name)
+        val report = BundleCodec.import(exported).getOrThrow()
+        assertEquals(1, report.imported)
+        assertEquals(1, report.profiles.size)
+        assertNotEquals(usable.id, report.profiles[0].id)
+        assertEquals("Office", report.profiles[0].name)
+        val again = BundleCodec.import(
+            exported,
+            existingPublicKeys = setOf(ConfigTexts.peerPublicKey(usable.rawConfig)!!),
+        ).getOrThrow()
+        assertEquals(0, again.imported)
+        assertEquals(1, again.skipped)
+        assertTrue(again.profiles.isEmpty())
         assertFailsWith<IllegalArgumentException> {
             BundleCodec.import("{\"nope\":true}").getOrThrow()
         }
+    }
+
+    @Test
+    fun unknownFieldsCorruptEntriesAndSizeLimit() {
+        val usable = ConfigTexts.import(
+            """
+            [Interface]
+            PrivateKey = yAnz5TF+lXXJte14tji3zlMNq+hd2rYUIgJBgB3fBmk=
+            Address = 10.7.0.2/32
+            [Peer]
+            PublicKey = HIgo9xNzJMWLKASShiTqIybxZ0U3wGLiUeJ1PKf8ykw=
+            AllowedIPs = 0.0.0.0/0
+            Endpoint = wg.internal.lan:51820
+            """.trimIndent(),
+            "Office",
+        ).getOrThrow()
+        val root = com.google.gson.JsonParser.parseString(BundleCodec.export(listOf(usable))).asJsonObject
+        val first = root.getAsJsonArray("profiles")[0].asJsonObject
+        first.addProperty("notes", "ignore me")
+        val withUnknown = BundleCodec.import(root.toString()).getOrThrow()
+        assertEquals(1, withUnknown.imported)
+        assertEquals("Office", withUnknown.profiles[0].name)
+
+        val both = com.google.gson.JsonObject()
+        both.addProperty("phonekey", 1)
+        val rows = com.google.gson.JsonArray()
+        rows.add(root.getAsJsonArray("profiles")[0])
+        val corrupt = root.getAsJsonArray("profiles")[0].deepCopy()
+        corrupt.asJsonObject.addProperty("rawConfig", "this is not wireguard")
+        corrupt.asJsonObject.addProperty("name", "Broken row")
+        rows.add(corrupt)
+        both.add("profiles", rows)
+        val mixed = BundleCodec.import(both.toString()).getOrThrow()
+        assertEquals(1, mixed.imported)
+        assertEquals(1, mixed.failed)
+
+        val huge = "x".repeat(ConfigTexts.MAX_BYTES + 1)
+        assertTrue(BundleCodec.import(huge).isFailure)
+        val duplicateKey = BundleCodec.import(BundleCodec.export(listOf(usable, usable))).getOrThrow()
+        assertEquals(1, duplicateKey.imported)
+        assertEquals(1, duplicateKey.skipped)
     }
 }
 

@@ -1,6 +1,6 @@
 # PhoneKey23 for Android
 
-Native Android WireGuard client. Package: `com.phonekey.vpn`. JDK 17, Kotlin, Jetpack Compose, `minSdk 26`, `targetSdk 35`, `compileSdk 35`.
+Native Android WireGuard client. Package: `com.phonekey.vpn`. JDK 17, Kotlin, Jetpack Compose, `minSdk 26`, `targetSdk 36`, `compileSdk 36`. Version name 1.1.0.
 
 Project page, which does not itself connect a VPN: [https://tajoor621.github.io/PhoneKey23/](https://tajoor621.github.io/PhoneKey23/). The line on the repository is **Chaabi jo aapko Jorhy Apno sy** — the key that joins you with your own.
 
@@ -44,7 +44,7 @@ The app supports Android allowed/excluded application lists. Validate this behav
 | `FOREGROUND_SERVICE`, `FOREGROUND_SERVICE_SPECIAL_USE` | Foreground VPN service and ongoing notification |
 | `POST_NOTIFICATIONS` | VPN status notification |
 | `RECEIVE_BOOT_COMPLETED` | Optional boot auto-connect |
-| `WAKE_LOCK` | Short wake lock during connection setup |
+| `WAKE_LOCK` | Partial wake lock for the whole connect attempt (60 second cap), released when the attempt ends |
 | `CAMERA` | Optional QR scanning |
 
 The VPN service is guarded by `BIND_VPN_SERVICE`; Android's `VpnService.prepare()` consent flow must be completed before connecting. The service currently declares the `specialUse` foreground-service subtype `vpn`; this declaration and distribution-policy compliance must be reviewed against the target Android versions and chosen distribution channel.
@@ -59,7 +59,19 @@ Open this `phonekey` directory in Android Studio with JDK 17, or run:
 ./gradlew :app:assembleDebug
 ```
 
-CI runs core unit tests, web checks, Compose instrumented UI tests on an API 30 emulator, and Android unit tests before generating the debug APK artifact.
+CI runs core unit tests, web checks, Compose instrumented UI tests on an emulator matrix (API 26, 29, 31, 34, 35, 36), and Android unit tests before generating the debug APK artifact. A version tag runs `lintRelease`, `apksigner` from `build-tools/36.0.0`, and `scripts/check-16kb.sh` before publishing. A debug APK is never the production asset.
+
+## Deep link
+
+The app handles `phonekey://activate` only. `https://tajoor621.github.io/PhoneKey23/activate/` is a web page that links to that scheme. It is not an Android App Link.
+
+## Battery
+
+A connected tunnel is a foreground service. Doze can still restrict a process the user force-stops or that the vendor puts in deep sleep. If the tunnel drops while the phone is idle, exempt PhoneKey from battery optimization in system settings. The app does not request that exemption by itself.
+
+## 16 KB pages
+
+`com.wireguard.android:tunnel:1.0.20260102` ships arm64-v8a and x86_64 libraries with ELF LOAD alignment `0x4000`. The 32-bit libraries in that same artifact are aligned to `0x1000`. 16 KB devices do not load the 32-bit copies. See [BASELINE.md](BASELINE.md).
 
 ## Signed GitHub Releases
 

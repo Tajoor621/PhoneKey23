@@ -206,9 +206,9 @@ function HomeScreen({
 
   const statusLabel =
     session.status === "CONNECTED"
-      ? "Connected"
+      ? "Preview"
       : session.status === "CONNECTING"
-        ? "Connecting"
+        ? "Preview"
         : session.status === "ERROR"
           ? "Not connected"
           : "Off";
@@ -580,12 +580,11 @@ function SettingsScreen({ settings }: { settings: AppSettings }) {
         PhoneKey is free. No ads. No subscriptions. No accounts. No analytics. WireGuard is the only working protocol. Xray and SSTP are not implemented.
       </p>
       <a
-        href="/phonekey-source.zip"
-        download="PhoneKey-android.zip"
+        href="https://github.com/Tajoor621/PhoneKey23/releases/download/v1.0.2/phonekey-source.zip"
         className="mt-4 flex h-12 items-center justify-center gap-2 rounded-2xl border border-line font-semibold"
       >
         <Download className="size-5" aria-hidden="true" />
-        Download the Android project
+        Source archive (v1.0.2)
       </a>
       <a
         href="https://github.com/Tajoor621/PhoneKey23/releases/latest"

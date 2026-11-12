@@ -2,6 +2,7 @@ package com.phonekey.vpn.data.store
 
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
+import com.phonekey.vpn.data.store.ProfileSealFormat
 import java.security.KeyStore
 import java.util.Base64
 import javax.crypto.Cipher
@@ -13,8 +14,8 @@ import javax.crypto.spec.GCMParameterSpec
  * Encrypts profile config text with an AES key that never leaves Android Keystore.
  * The ciphertext is stored in profiles.json. The key is not in that file.
  */
-class ProfileCipher {
-    fun seal(plain: String): String {
+class ProfileCipher : ProfileSealer {
+    override fun seal(plain: String): String {
         if (plain.startsWith(PREFIX)) return plain
         val cipher = Cipher.getInstance(TRANSFORMATION)
         cipher.init(Cipher.ENCRYPT_MODE, key())
@@ -26,7 +27,7 @@ class ProfileCipher {
         return PREFIX + Base64.getEncoder().encodeToString(packed)
     }
 
-    fun open(stored: String): String {
+    override fun open(stored: String): String {
         if (!stored.startsWith(PREFIX)) return stored
         val packed = Base64.getDecoder().decode(stored.removePrefix(PREFIX))
         require(packed.size > GCM_IV_BYTES) { "Encrypted profile is truncated." }
@@ -55,7 +56,7 @@ class ProfileCipher {
     }
 
     companion object {
-        const val PREFIX = "pk1:"
+        const val PREFIX = ProfileSealFormat.PREFIX
         private const val ALIAS = "phonekey.profile.v1"
         private const val ANDROID_KEYSTORE = "AndroidKeyStore"
         private const val TRANSFORMATION = "AES/GCM/NoPadding"

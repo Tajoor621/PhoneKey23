@@ -4,7 +4,9 @@ import {
   generateWireGuard,
   implemented,
   importConfig,
+  importProfileBundle,
   isDocumentationEndpoint,
+  peerPublicKey,
   type Protocol,
   type VpnProfile,
   type WireGuardFields,
@@ -171,8 +173,12 @@ export const usePhoneKey = create<PhoneKeyState>()(
         },
         updateSettings: (patch) => set((state) => ({ settings: { ...state.settings, ...patch } })),
         importText: (text, suggestedName) => {
+          const trimmed = text.trim().replace(/^\uFEFF/, "");
+          if (trimmed.startsWith("{") && trimmed.includes('"phonekey"')) {
+            return get().importBundle(trimmed);
+          }
           try {
-            remember(importConfig(text, suggestedName));
+            remember(importConfig(trimmed, suggestedName));
             return true;
           } catch (error) {
             note(error instanceof Error ? error.message : "Could not import that config.");
@@ -218,23 +224,24 @@ export const usePhoneKey = create<PhoneKeyState>()(
           JSON.stringify({ phonekey: 1, profiles: get().profiles }, null, 2),
         importBundle: (text: string) => {
           try {
-            const parsed: unknown = JSON.parse(text);
-            const root = parsed as { phonekey?: number; profiles?: VpnProfile[] };
-            if (root.phonekey !== 1 || !Array.isArray(root.profiles)) {
-              throw new Error("That file is not a PhoneKey profile export.");
+            const existing = get()
+              .profiles.map((profile) => peerPublicKey(profile.rawConfig))
+              .filter((key): key is string => Boolean(key));
+            const report = importProfileBundle(text, existing);
+            if (report.profiles.length > 0) {
+              set((state) => ({
+                profiles: [...report.profiles, ...state.profiles],
+                settings: {
+                  ...state.settings,
+                  selectedProfileId: report.profiles[0]?.id ?? state.settings.selectedProfileId,
+                },
+              }));
             }
-            const accepted: VpnProfile[] = [];
-            for (const item of root.profiles) {
-              if (!item?.rawConfig) continue;
-              accepted.push(importConfig(item.rawConfig, item.name));
-            }
-            if (accepted.length === 0) throw new Error("Nothing in that file could be imported.");
-            set((state) => ({
-              profiles: [...accepted, ...state.profiles.filter((profile) => !accepted.some((item) => item.name === profile.name && item.rawConfig === profile.rawConfig))],
-              settings: { ...state.settings, selectedProfileId: accepted[0]?.id ?? state.settings.selectedProfileId },
-            }));
-            note(`Imported ${accepted.length} profile${accepted.length === 1 ? "" : "s"}.`);
-            return true;
+            const parts = [`Imported ${report.imported}`];
+            if (report.skipped > 0) parts.push(`skipped ${report.skipped} already imported`);
+            if (report.failed > 0) parts.push(`failed ${report.failed}`);
+            note(`${parts.join(", ")}.`);
+            return report.imported > 0;
           } catch (error) {
             note(error instanceof Error ? error.message : "Could not import that file.");
             return false;
@@ -279,20 +286,21 @@ export const usePhoneKey = create<PhoneKeyState>()(
               profileId: profile.id,
               profileName: profile.name,
               protocol: profile.protocol,
+              message: "This page cannot open a WireGuard tunnel or wait for a handshake.",
             },
           });
           connectTimer = window.setTimeout(() => {
             const latest = get();
             if (latest.session.status !== "CONNECTING" || latest.session.profileId !== profile.id) return;
             const excluded = latest.settings.splitTunnelEnabled ? latest.settings.splitTunnelPackages.length : 0;
-            const parts: string[] = ["This page does not route traffic. Speeds here are simulated."];
+            const parts: string[] = ["Preview only. Speeds here are simulated. The Android app is what connects."];
             if (excluded > 0) {
               parts.push(
-                `On Android this profile would exclude ${excluded} package${excluded === 1 ? "" : "s"}.`,
+                `On Android this profile would ${latest.settings.splitIncludeOnly ? "include only" : "bypass"} ${excluded} package${excluded === 1 ? "" : "s"}.`,
               );
             }
             if (latest.settings.killSwitch) {
-              parts.push("If the tunnel drops, Android retries. This page cannot block other traffic.");
+              parts.push("If the tunnel drops, Android retries up to 3 times. This page cannot block other traffic.");
             }
             set({
               session: {
@@ -305,7 +313,7 @@ export const usePhoneKey = create<PhoneKeyState>()(
                 txBytes: 0,
                 rxSpeedBps: 0,
                 txSpeedBps: 0,
-                message: parts.length ? parts.join(" ") : null,
+                message: parts.join(" "),
               },
             });
             startTicker();

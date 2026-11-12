@@ -30,7 +30,8 @@ object ProtocolPolicy {
     fun isDocumentationEndpoint(endpoint: String?): Boolean {
         if (endpoint.isNullOrBlank()) return false
         val host = hostOf(endpoint).lowercase()
-        if (host == "localhost" || host == "example" ||
+        // localhost is a real test server, not an RFC 2606 documentation name.
+        if (host == "example" ||
             host.endsWith(".example") || host.endsWith(".invalid") || host.endsWith(".test") ||
             host == "example.com" || host.endsWith(".example.com") ||
             host == "example.net" || host.endsWith(".example.net") ||

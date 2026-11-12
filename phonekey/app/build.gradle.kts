@@ -6,14 +6,14 @@ plugins {
 
 android {
     namespace = "com.phonekey.vpn"
-    compileSdk = 35
+    compileSdk = 36
 
     defaultConfig {
         applicationId = "com.phonekey.vpn"
         minSdk = 26
-        targetSdk = 35
-        versionCode = 3
-        versionName = "1.0.2"
+        targetSdk = 36
+        versionCode = 4
+        versionName = "1.1.0"
         vectorDrawables { useSupportLibrary = true }
     }
 
@@ -56,6 +56,12 @@ android {
         compose = true
     }
 
+    lint {
+        lintConfig = file("lint.xml")
+        abortOnError = true
+        warningsAsErrors = false
+    }
+
     packaging {
         jniLibs {
             useLegacyPackaging = true
@@ -76,16 +82,16 @@ android {
 }
 
 dependencies {
-    val composeBom = platform("androidx.compose:compose-bom:2024.10.01")
+    val composeBom = platform("androidx.compose:compose-bom:2026.09.00")
     implementation(composeBom)
     androidTestImplementation(composeBom)
 
     implementation(project(":core"))
-    implementation("androidx.core:core-ktx:1.15.0")
-    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.8.7")
-    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.8.7")
-    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.8.7")
-    implementation("androidx.activity:activity-compose:1.9.3")
+    implementation("androidx.core:core-ktx:1.17.0")
+    implementation("androidx.lifecycle:lifecycle-runtime-ktx:2.9.4")
+    implementation("androidx.lifecycle:lifecycle-runtime-compose:2.9.4")
+    implementation("androidx.lifecycle:lifecycle-viewmodel-compose:2.9.4")
+    implementation("androidx.activity:activity-compose:1.12.4")
     implementation("androidx.compose.ui:ui")
     implementation("androidx.compose.ui:ui-tooling-preview")
     implementation("androidx.compose.material3:material3")
@@ -93,7 +99,9 @@ dependencies {
     implementation("androidx.datastore:datastore-preferences:1.1.1")
     implementation("org.jetbrains.kotlinx:kotlinx-coroutines-android:1.9.0")
 
-    // Latest tunnel build as of 2026-01. WireGuard userspace (wg-go) lives in this AAR.
+    // Latest tunnel artifact published to Maven Central (verified 2026-11-11).
+    // com.wireguard.config.Interface parses IncludedApplications and ExcludedApplications.
+    // There is no newer com.wireguard.android:tunnel release than 1.0.20260102.
     implementation("com.wireguard.android:tunnel:1.0.20260102")
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
     implementation("com.google.code.gson:gson:2.11.0")

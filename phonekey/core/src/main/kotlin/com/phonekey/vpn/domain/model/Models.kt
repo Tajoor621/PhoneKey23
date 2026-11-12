@@ -55,4 +55,6 @@ data class Session(
     val rxSpeedBps: Double = 0.0,
     val txSpeedBps: Double = 0.0,
     val message: String? = null,
+    /** True only while this process is holding a non-forwarding tunnel after a drop. */
+    val killSwitchHold: Boolean = false,
 )

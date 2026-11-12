@@ -6,3 +6,6 @@ node_modules/
 phonekey/**/build/
 phonekey/.gradle/
 .grok/status
+.vercel/
+public/phonekey-source.zip
+.node_modules.lock

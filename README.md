@@ -8,8 +8,8 @@ PhoneKey23 is a native Android WireGuard VPN client. It is free software: no ads
 
 - Android package: `com.phonekey.vpn`
 - In-app name: PhoneKey
-- Android minimum: API 26 (Android 8.0), target API 35
-- Current version name: 1.0.2
+- Android minimum: API 26 (Android 8.0), target API 36
+- Current version name: 1.1.0
 - Build: Kotlin, Jetpack Compose, JDK 17
 - Project page: [PhoneKey23](https://tajoor621.github.io/PhoneKey23/)
 - APK and source archive: [GitHub Releases](https://github.com/Tajoor621/PhoneKey23/releases)
@@ -44,7 +44,7 @@ Technical layout, permissions, and the kill-switch limit are also written in [ph
 ## Download and install
 
 1. Open [GitHub Releases](https://github.com/Tajoor621/PhoneKey23/releases).
-2. The current tag, [v1.0.2](https://github.com/Tajoor621/PhoneKey23/releases/tag/v1.0.2), attaches `app-debug.apk` (debug-signed, for installation and testing) and `phonekey-source.zip`. It is not a Play Store build. A signed `PhoneKey23-release.apk` is published only when the release signing secrets are present.
+2. The current source version is 1.1.0. The published tag [v1.0.2](https://github.com/Tajoor621/PhoneKey23/releases/tag/v1.0.2) is the last GitHub release. It attaches `app-debug.apk` (debug-signed) and `phonekey-source.zip`. A signed `PhoneKey23-release.apk` is published only when the release signing secrets are present. This repository does not upload a debug APK as that production asset.
 3. Install the APK on Android 8.0 or newer. Android accepts an update only when the package id and signing certificate both match. A later release-signed APK will not install over this debug build. Do not uninstall or clear app data until you have exported your profiles: Keystore-encrypted data can become unrecoverable.
 4. Open PhoneKey, import a valid WireGuard `.conf` or scan its QR code, approve the VPN permission, and connect. “Connected” means a peer handshake was confirmed. If none arrives within 25 seconds, the app stays disconnected.
 
@@ -59,7 +59,7 @@ cd phonekey
 ./gradlew :app:assembleDebug
 ```
 
-GitHub Actions runs core unit tests, web typecheck/tests/build, and Android unit tests before uploading the debug APK artifact. Instrumented Compose UI tests run on an API 30 emulator. A version tag (`v*`) publishes a **signed release APK only after** the core, web, emulator, and debug jobs pass and every signing secret is present. If a signing secret is missing, the release job fails closed. A debug APK is not substituted as that production asset.
+GitHub Actions runs core unit tests, web typecheck/tests/build, and Android unit tests before uploading the debug APK artifact. Instrumented Compose UI tests run on an emulator matrix (API 26, 29, 31, 34, 35, and 36). A version tag (`v*`) publishes a **signed release APK only after** the core, web, emulator, and debug jobs pass and every signing secret is present. The release job calls `apksigner` from build-tools 36.0.0 and fails if verification or the 16 KB library check fails. If a signing secret is missing, the release job fails closed. A debug APK is not substituted as that production asset.
 
 Required GitHub Actions secrets for signed releases:
 
@@ -78,9 +78,11 @@ docs/         GitHub Pages project site. Information and download only.
 src/          Browser profile companion. It does not route traffic.
 ```
 
-The browser companion can exercise profile import and settings UI. Speeds shown there are simulated. It has no access to Android’s VPN service.
+The browser companion can exercise profile import and settings UI. Speeds shown there are simulated, and it never reports a real WireGuard handshake. It has no access to Android’s VPN service. Importing a profile list assigns new ids and skips a profile whose WireGuard public key is already saved.
 
-The Pages site under `docs/` is the public project page: [https://tajoor621.github.io/PhoneKey23/](https://tajoor621.github.io/PhoneKey23/). The `/activate/` path is only a handoff into `phonekey://activate` when the app is installed. It does not connect a tunnel. Fonts on that site are the same files shipped in the Android app, so the page does not call a third-party font host.
+The companion does not use accounts. `src/lib/auth`, `migrations/auth`, and `server/` stay in this workspace because the preview shell requires them. PhoneKey itself stores profiles only on the device.
+
+The `/activate/` path on the project site is a handoff into `phonekey://activate` when the app is installed. The app does not register that https URL as a verified Android App Link, so Android will not claim it. The page does not connect a tunnel.
 
 ## License
 

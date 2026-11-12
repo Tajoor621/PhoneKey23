@@ -70,30 +70,70 @@ class PhoneKeyVpnService : GoBackend.VpnService() {
         // token is Always-on or a restart after the process died.
         val result = super.onStartCommand(intent, flags, startId)
         startForegroundCompat(buildNotification(latest))
+        val boot = intent?.getBooleanExtra(EXTRA_BOOT, false) == true
         if (!startedByUs) {
             (application as PhoneKeyApp).container.vpnRepository.onAlwaysOnTriggered()
+        } else if (boot) {
+            (application as PhoneKeyApp).container.vpnRepository.connectSelected(serviceAlreadyUp = true)
         }
         return result
+    }
+
+    override fun onRevoke() {
+        (application as PhoneKeyApp).container.vpnRepository.onVpnRevoked()
+        super.onRevoke()
     }
 
     override fun onDestroy() {
         releaseBlackhole()
         scope.cancel()
-        if (instance === this) instance = null
+        val dying = this
+        if (restartOnDestroy) {
+            restartOnDestroy = false
+            try {
+                val token = armStart()
+                startForegroundService(
+                    Intent(this, PhoneKeyVpnService::class.java)
+                        .putExtra(EXTRA_GENERATION, token),
+                )
+            } catch (_: Exception) {
+                // API 31+ can refuse a background start. ensureRunning reports that.
+            }
+        }
         super.onDestroy()
+        if (instance === dying) instance = null
+        // GoBackend.VpnService.onDestroy replaces the static service future.
+        // If a newer instance already completed that future, the dying instance
+        // just wiped it. onStartCommand completes it again with the live service.
+        val newer = instance
+        if (newer != null && newer !== dying) {
+            newer.recompleteFuture()
+        }
+    }
+
+    private fun recompleteFuture() {
+        super.onStartCommand(Intent(this, PhoneKeyVpnService::class.java), 0, 0)
     }
 
     /** Holds a tunnel that routes everything and forwards nothing. Replaces any WireGuard fd. */
     fun engageBlackhole(): Boolean {
         releaseBlackhole()
+        if (establishBlackhole(includeIpV6 = true)) return true
+        return establishBlackhole(includeIpV6 = false)
+    }
+
+    private fun establishBlackhole(includeIpV6: Boolean): Boolean {
         return try {
             val builder = Builder()
                 .setSession("PhoneKey block")
                 .addAddress("10.255.255.2", 32)
                 .addRoute("0.0.0.0", 0)
-                .addRoute("::", 0)
                 .setMtu(1280)
                 .setBlocking(true)
+            if (includeIpV6) {
+                builder.addAddress("fd00:ffff::2", 128)
+                builder.addRoute("::", 0)
+            }
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) builder.setMetered(false)
             blackhole = builder.establish()
             blackhole != null
@@ -153,7 +193,8 @@ class PhoneKeyVpnService : GoBackend.VpnService() {
                 append(formatRate(session.txSpeedBps))
                 append(" up")
             }
-            session.status == TunnelStatus.CONNECTING -> getString(R.string.notif_starting)
+            session.status == TunnelStatus.CONNECTING ->
+                session.message ?: getString(R.string.notif_starting)
             session.status == TunnelStatus.ERROR -> session.message ?: getString(R.string.notif_disconnected)
             else -> getString(R.string.notif_disconnected)
         }
@@ -191,6 +232,7 @@ class PhoneKeyVpnService : GoBackend.VpnService() {
         const val ACTION_DISCONNECT = "com.phonekey.vpn.action.DISCONNECT"
         const val ACTION_CONNECT = "com.phonekey.vpn.action.CONNECT"
         const val EXTRA_GENERATION = "generation"
+        const val EXTRA_BOOT = "boot"
         private const val NO_TOKEN = -1
         private const val NOTIFICATION_ID = 42
         private const val READY_TIMEOUT_MS = 5_000L
@@ -203,11 +245,64 @@ class PhoneKeyVpnService : GoBackend.VpnService() {
         @Volatile
         private var instance: PhoneKeyVpnService? = null
 
+        @Volatile
+        private var restartOnDestroy = false
+
+        fun restartOnNextDestroy() {
+            restartOnDestroy = true
+        }
+
         /** Call immediately before [android.content.Context.startForegroundService]. */
         fun armStart(): Int {
             val token = generation.incrementAndGet()
             liveGeneration = token
             return token
+        }
+
+        /**
+         * Start this service if GoBackend's future is not pointing at a live instance.
+         * Never starts GoBackend.VpnService: that class is removed from the manifest.
+         */
+        suspend fun ensureRunning(context: android.content.Context): Boolean {
+            val running = instance
+            if (running != null && liveGeneration != 0 && running.boundGeneration == liveGeneration) {
+                return true
+            }
+            // A restart requested from onDestroy is already in flight. Arming a second
+            // token would make that start look stale and the service would stop itself.
+            if (running != null && liveGeneration != 0) {
+                return awaitReady()
+            }
+            return try {
+                val token = armStart()
+                val intent = Intent(context, PhoneKeyVpnService::class.java)
+                    .putExtra(EXTRA_GENERATION, token)
+                context.startForegroundService(intent)
+                awaitReady()
+            } catch (_: Exception) {
+                false
+            }
+        }
+
+        fun currentGeneration(): Int = liveGeneration
+
+        /**
+         * Wait until [onDestroy] has started the replacement service.
+         * [previousGeneration] is the token from before [restartOnNextDestroy].
+         */
+        suspend fun awaitRelaunch(previousGeneration: Int): Boolean {
+            val start = SystemClock.elapsedRealtime()
+            while (SystemClock.elapsedRealtime() - start < 2_000L) {
+                val running = instance
+                if (liveGeneration != previousGeneration &&
+                    running != null &&
+                    running.boundGeneration == liveGeneration
+                ) {
+                    return true
+                }
+                delay(20)
+            }
+            return false
         }
 
         fun requestStop() {

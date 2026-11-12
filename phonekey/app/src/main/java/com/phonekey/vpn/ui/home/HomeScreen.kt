@@ -45,6 +45,7 @@ fun HomeScreen(
     selected: VpnProfile?,
     onToggle: () -> Unit,
     onChooseProfile: () -> Unit,
+    profileNotice: String? = null,
 ) {
     var now by remember { mutableLongStateOf(System.currentTimeMillis()) }
     LaunchedEffect(session.status, session.sinceEpochMs) {
@@ -68,6 +69,14 @@ fun HomeScreen(
             style = MaterialTheme.typography.bodyMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        if (!profileNotice.isNullOrBlank()) {
+            Spacer(Modifier.height(12.dp))
+            Text(
+                profileNotice,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.error,
+            )
+        }
         Spacer(Modifier.height(28.dp))
         Text(
             when (session.status) {
@@ -79,6 +88,14 @@ fun HomeScreen(
             style = MaterialTheme.typography.titleMedium,
             color = MaterialTheme.colorScheme.onSurfaceVariant,
         )
+        val detail = session.message
+        if (!detail.isNullOrBlank() && session.status != TunnelStatus.DISCONNECTED) {
+            Text(
+                detail,
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
         Text(
             if (session.status == TunnelStatus.CONNECTED) formatDuration(session.sinceEpochMs, now) else "00:00",
             style = MaterialTheme.typography.displaySmall,

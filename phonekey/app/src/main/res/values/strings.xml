@@ -10,6 +10,7 @@
     <string name="notif_disconnected">Disconnected</string>
     <string name="action_disconnect">Disconnect</string>
     <string name="action_connect">Connect</string>
+    <string name="boot_needs_tap">Auto-connect could not start. Tap to connect.</string>
     <string name="activate_title">PhoneKey is free. No ads. No subscriptions.</string>
     <string name="activate_body">No accounts. Your WireGuard keys stay on this phone.</string>
     <string name="activate_continue">Open PhoneKey</string>
