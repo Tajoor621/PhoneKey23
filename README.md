@@ -78,7 +78,7 @@ docs/         GitHub Pages project site. Information and download only.
 src/          Browser profile companion. It does not route traffic.
 ```
 
-The browser companion can exercise profile import and settings UI. Speeds shown there are simulated, and it never reports a real WireGuard handshake. It has no access to Android’s VPN service. Importing a profile list assigns new ids and skips a profile whose WireGuard public key is already saved.
+The browser companion can import, edit, and export profiles. It checks a WireGuard config and does not report a connection, because it cannot complete a handshake or route traffic. Importing a profile list assigns new ids and skips a profile whose WireGuard public key is already saved.
 
 The companion does not use accounts. `src/lib/auth`, `migrations/auth`, and `server/` stay in this workspace because the preview shell requires them. PhoneKey itself stores profiles only on the device.
 

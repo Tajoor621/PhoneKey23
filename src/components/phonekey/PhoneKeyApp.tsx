@@ -18,9 +18,6 @@ import QRCode from "qrcode";
 import {
   EMPTY_FIELDS,
   EXAMPLE_WIREGUARD,
-  formatBytes,
-  formatDuration,
-  formatRate,
   implemented,
   protocolLabel,
   type VpnProfile,
@@ -195,80 +192,51 @@ function HomeScreen({
   onToggle: () => void;
   onChoose: () => void;
 }) {
-  const [now, setNow] = useState(() => Date.now());
   const busy = session.status === "CONNECTING";
-  const on = session.status === "CONNECTED" || busy;
-  useEffect(() => {
-    if (session.status !== "CONNECTED") return;
-    const id = window.setInterval(() => setNow(Date.now()), 1000);
-    return () => window.clearInterval(id);
-  }, [session.status, session.sinceEpochMs]);
-
-  const statusLabel =
-    session.status === "CONNECTED"
-      ? "Preview"
-      : session.status === "CONNECTING"
-        ? "Preview"
-        : session.status === "ERROR"
-          ? "Not connected"
-          : "Off";
+  const statusLabel = session.status === "ERROR" ? "Not connected" : session.message ? "Checked" : "Off";
 
   return (
     <div className="flex flex-1 flex-col items-center px-6 py-6">
       <h1 className="font-display text-3xl font-semibold">PhoneKey</h1>
       <p className="mt-1 text-center text-sm text-muted">No ads. No subscription.</p>
       <p className="mt-8 text-sm font-semibold text-muted">{statusLabel}</p>
-      <p className="font-display text-5xl leading-tight">
-        {session.status === "CONNECTED" ? formatDuration(session.sinceEpochMs, now) : "00:00"}
-      </p>
+      <p className="font-display text-5xl leading-tight">00:00</p>
       <button
         type="button"
         onClick={onToggle}
         disabled={busy}
-        aria-label={on ? "Disconnect" : "Connect"}
-        className={`mt-8 grid size-44 place-items-center rounded-full border-2 border-brass disabled:opacity-70 ${on ? "bg-brass text-brass-ink" : "bg-card text-brass"}`}
+        aria-label={selected ? "Check profile" : "Choose a profile"}
+        className="mt-8 grid size-44 place-items-center rounded-full border-2 border-brass bg-card text-brass disabled:opacity-70"
       >
         <Power className="size-16" strokeWidth={1.6} />
       </button>
-      <p className="mt-3 text-sm font-semibold text-muted">{on ? "Tap to disconnect" : "Tap to connect"}</p>
+      <p className="mt-3 text-sm font-semibold text-muted">{selected ? "Check this profile" : "Choose a profile"}</p>
       {session.message && (
         <p className={`mt-4 max-w-sm text-center text-sm ${session.status === "ERROR" ? "text-clay" : "text-muted"}`}>
           {session.message}
         </p>
       )}
-      <p className="mt-4 max-w-sm text-center text-sm text-muted">
-        This page keeps configs on this device and does not route traffic. The Android app opens the real tunnel. The Studio project is under Settings.
+      <a
+        href="https://github.com/Tajoor621/PhoneKey23/releases/download/v1.0.2/app-debug.apk"
+        className="mt-5 flex h-12 w-full max-w-sm items-center justify-center gap-2 rounded-2xl bg-brass font-semibold text-brass-ink"
+      >
+        <Download className="size-5" aria-hidden="true" />
+        Install Android app
+      </a>
+      <p className="mt-2 max-w-sm text-center text-xs text-muted">
+        Last published build is 1.0.2, debug-signed. The tunnel starts only after Android’s VPN permission and a real handshake.
       </p>
       <div className="mt-auto w-full pt-8">
         <button type="button" onClick={onChoose} className="w-full rounded-2xl bg-card p-4 text-left">
           <span className="block text-xs font-medium text-muted">Profile</span>
           <span className="mt-1 block text-base font-semibold">{selected?.name ?? "None selected"}</span>
-          <span className="mt-1 block text-sm text-muted">
+          <span className="block mt-1 text-sm text-muted">
             {selected
               ? `${protocolLabel(selected.protocol)}${selected.endpoint ? ` · ${selected.endpoint}` : ""}`
               : "Add a WireGuard config to start"}
           </span>
         </button>
-        {session.status === "CONNECTED" && (
-          <div className="mt-3 grid grid-cols-2 gap-3">
-            <Stat label="Down" rate={formatRate(session.rxSpeedBps)} total={formatBytes(session.rxBytes)} />
-            <Stat label="Up" rate={formatRate(session.txSpeedBps)} total={formatBytes(session.txBytes)} />
-          </div>
-        )}
-        {session.status === "CONNECTED" && (
-          <p className="mt-2 text-center text-xs text-muted">Rates on this page are simulated.</p>
-        )}
       </div>
-    </div>
-  );
-}
-
-function Stat({ label, rate, total }: { label: string; rate: string; total: string }) {
-  return (
-    <div className="rounded-2xl bg-card p-4">
-      <p className="text-xs font-medium text-muted">{label}</p>
-      <p className="mt-1 font-semibold">{rate}</p>
-      <p className="text-sm text-muted">{total}</p>
     </div>
   );
 }

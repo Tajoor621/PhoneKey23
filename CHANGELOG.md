@@ -13,7 +13,7 @@ Correctness and Android 16 target for the WireGuard client. No new protocols.
 - Notification Connect opens the app, which still asks for VPN consent. Notification Disconnect still disconnects.
 - `phonekey://activate` is the only app deep link. The https Pages URL is a handoff, not a verified App Link.
 - `localhost` is allowed as a WireGuard endpoint. Documentation names and the RFC 5737 ranges are still rejected.
-- `targetSdk` and `compileSdk` are 36. Toolchain: Android Gradle Plugin 8.13.2, Kotlin 2.2.21, Gradle 8.13, Compose BOM 2026.09.00. WireGuard tunnel stays at 1.0.20260102, the newest published artifact.
+- `targetSdk` and `compileSdk` are 36. Toolchain: Android Gradle Plugin 8.13.2, Kotlin 2.2.21, Gradle 8.13, Compose BOM 2026.06.01 (Compose 1.11.4). BOM 2026.09.00 pulls Compose 1.12, which refuses to compile unless the project moves to compileSdk 37 and AGP 9. WireGuard tunnel stays at 1.0.20260102, the newest published artifact.
 - After a drop or a network change, WireGuard is shut down and PhoneKey’s own VPN service is started again before the next handshake. The library’s shutdown stops the service; starting the removed library service left the tunnel down. A kill-switch block is applied only after that shutdown, and it falls back to IPv4 when the device rejects an IPv6 route.
 - A sealed profile file is not rewritten on every launch. Only a file that still has a plaintext config is sealed again.
 - 64-bit native libraries in tunnel 1.0.20260102 are 16 KB aligned. 32-bit libraries in that artifact are 4 KB aligned; 16 KB devices do not load them.

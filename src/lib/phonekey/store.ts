@@ -92,45 +92,6 @@ const memoryStorage = {
 };
 
 let bannerTimer: number | null = null;
-let connectTimer: number | null = null;
-let ticker: number | null = null;
-
-function stopTicker() {
-  if (ticker != null) window.clearInterval(ticker);
-  ticker = null;
-}
-
-function clearConnectTimer() {
-  if (connectTimer != null) window.clearTimeout(connectTimer);
-  connectTimer = null;
-}
-
-function startTicker() {
-  stopTicker();
-  let rx = 0;
-  let tx = 0;
-  ticker = window.setInterval(() => {
-    const state = usePhoneKey.getState();
-    if (state.session.status !== "CONNECTED") {
-      stopTicker();
-      return;
-    }
-    const t = Date.now() / 1000;
-    const rxBps = Math.max(1200, 48000 + Math.sin(t * 0.8) * 32000);
-    const txBps = Math.max(400, 14000 + Math.cos(t * 0.55) * 8000);
-    rx += rxBps;
-    tx += txBps;
-    usePhoneKey.setState({
-      session: {
-        ...state.session,
-        rxBytes: Math.round(rx),
-        txBytes: Math.round(tx),
-        rxSpeedBps: rxBps,
-        txSpeedBps: txBps,
-      },
-    });
-  }, 1000);
-}
 
 export const usePhoneKey = create<PhoneKeyState>()(
   persist(
@@ -159,8 +120,6 @@ export const usePhoneKey = create<PhoneKeyState>()(
         remove: (id) => {
           const current = get();
           if (current.session.profileId === id) {
-            clearConnectTimer();
-            stopTicker();
             set({ session: emptySession() });
           }
           set((state) => ({
@@ -248,8 +207,6 @@ export const usePhoneKey = create<PhoneKeyState>()(
           }
         },
         disconnect: () => {
-          clearConnectTimer();
-          stopTicker();
           set({ session: emptySession() });
         },
         connectSelected: () => {
@@ -278,46 +235,27 @@ export const usePhoneKey = create<PhoneKeyState>()(
             note(message);
             return;
           }
-          clearConnectTimer();
+          const excluded = state.settings.splitTunnelEnabled ? state.settings.splitTunnelPackages.length : 0;
+          const parts: string[] = [
+            "This config is valid WireGuard. A browser cannot open the tunnel or wait for a handshake. Install PhoneKey on Android and import this profile there.",
+          ];
+          if (excluded > 0) {
+            parts.push(
+              `On Android this profile would ${state.settings.splitIncludeOnly ? "include only" : "bypass"} ${excluded} package${excluded === 1 ? "" : "s"}.`,
+            );
+          }
+          if (state.settings.killSwitch) {
+            parts.push("If the tunnel drops, Android retries up to 3 times. This page cannot block other traffic.");
+          }
           set({
             session: {
               ...emptySession(),
-              status: "CONNECTING",
               profileId: profile.id,
               profileName: profile.name,
               protocol: profile.protocol,
-              message: "This page cannot open a WireGuard tunnel or wait for a handshake.",
+              message: parts.join(" "),
             },
           });
-          connectTimer = window.setTimeout(() => {
-            const latest = get();
-            if (latest.session.status !== "CONNECTING" || latest.session.profileId !== profile.id) return;
-            const excluded = latest.settings.splitTunnelEnabled ? latest.settings.splitTunnelPackages.length : 0;
-            const parts: string[] = ["Preview only. Speeds here are simulated. The Android app is what connects."];
-            if (excluded > 0) {
-              parts.push(
-                `On Android this profile would ${latest.settings.splitIncludeOnly ? "include only" : "bypass"} ${excluded} package${excluded === 1 ? "" : "s"}.`,
-              );
-            }
-            if (latest.settings.killSwitch) {
-              parts.push("If the tunnel drops, Android retries up to 3 times. This page cannot block other traffic.");
-            }
-            set({
-              session: {
-                status: "CONNECTED",
-                profileId: profile.id,
-                profileName: profile.name,
-                protocol: profile.protocol,
-                sinceEpochMs: Date.now(),
-                rxBytes: 0,
-                txBytes: 0,
-                rxSpeedBps: 0,
-                txSpeedBps: 0,
-                message: parts.join(" "),
-              },
-            });
-            startTicker();
-          }, 800);
         },
       };
     },
