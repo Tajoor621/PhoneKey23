@@ -9,6 +9,7 @@ import com.phonekey.vpn.domain.engine.TrafficSnapshot
 import com.phonekey.vpn.domain.engine.VpnEngine
 import com.phonekey.vpn.domain.model.Protocol
 import com.phonekey.vpn.domain.model.VpnProfile
+import com.phonekey.vpn.service.PhoneKeyVpnService
 import com.wireguard.android.backend.GoBackend
 import com.wireguard.android.backend.Tunnel
 import com.wireguard.config.Config
