@@ -1,5 +1,6 @@
 package com.phonekey.vpn.service
 
+import android.annotation.SuppressLint
 import android.app.PendingIntent
 import android.content.Intent
 import android.net.VpnService
@@ -94,7 +95,9 @@ class QuickTileService : TileService() {
             )
             startActivityAndCollapse(pending)
         } else {
+            // API 33 and below only have the Intent overload. Lint treats that overload as an error.
             @Suppress("DEPRECATION")
+            @SuppressLint("StartActivityAndCollapseDeprecated")
             startActivityAndCollapse(intent)
         }
     }
