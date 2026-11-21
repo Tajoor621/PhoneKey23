@@ -8,8 +8,8 @@ PhoneKey23 is a native Android WireGuard VPN client. It is free software: no ads
 
 - Android package: `com.phonekey.vpn`
 - In-app name: PhoneKey
-- Android minimum: API 26 (Android 8.0), target API 36
-- Current version name: 1.1.0
+- Android minimum: API 24 (Android 7.0), target API 37 (Android 17)
+- Current version name: 1.2.0
 - Build: Kotlin, Jetpack Compose, JDK 17
 - Project page: [PhoneKey23](https://tajoor621.github.io/PhoneKey23/)
 - APK and source archive: [GitHub Releases](https://github.com/Tajoor621/PhoneKey23/releases)
@@ -44,8 +44,8 @@ Technical layout, permissions, and the kill-switch limit are also written in [ph
 ## Download and install
 
 1. Open [GitHub Releases](https://github.com/Tajoor621/PhoneKey23/releases).
-2. The current source version is 1.1.0. The published tag [v1.0.2](https://github.com/Tajoor621/PhoneKey23/releases/tag/v1.0.2) is the last GitHub release. It attaches `app-debug.apk` (debug-signed) and `phonekey-source.zip`. A signed `PhoneKey23-release.apk` is published only when the release signing secrets are present. This repository does not upload a debug APK as that production asset.
-3. Install the APK on Android 8.0 or newer. Android accepts an update only when the package id and signing certificate both match. A later release-signed APK will not install over this debug build. Do not uninstall or clear app data until you have exported your profiles: Keystore-encrypted data can become unrecoverable.
+2. The current source version is 1.2.0. The published tag [v1.0.2](https://github.com/Tajoor621/PhoneKey23/releases/tag/v1.0.2) is the last GitHub release. It attaches `app-debug.apk` (debug-signed, `minSdk` 26) and `phonekey-source.zip`. That APK installs on Android 8.0 or newer, not on Android 7. A signed `PhoneKey23-release.apk` is published only when the release signing secrets are present. This repository does not upload a debug APK as that production asset.
+3. A 1.2.0 build installs on Android 7.0 through Android 17. Android accepts an update only when the package id and signing certificate both match. A later release-signed APK will not install over the v1.0.2 debug build. Do not uninstall or clear app data until you have exported your profiles: Keystore-encrypted data can become unrecoverable.
 4. Open PhoneKey, import a valid WireGuard `.conf` or scan its QR code, approve the VPN permission, and connect. “Connected” means a peer handshake was confirmed. If none arrives within 25 seconds, the app stays disconnected.
 
 ## Build Android locally
@@ -59,7 +59,7 @@ cd phonekey
 ./gradlew :app:assembleDebug
 ```
 
-GitHub Actions runs core unit tests, web typecheck/tests/build, and Android unit tests before uploading the debug APK artifact. Instrumented Compose UI tests run on an emulator matrix (API 26, 29, 31, 34, 35, and 36). A version tag (`v*`) publishes a **signed release APK only after** the core, web, emulator, and debug jobs pass and every signing secret is present. The release job calls `apksigner` from build-tools 36.0.0 and fails if verification or the 16 KB library check fails. If a signing secret is missing, the release job fails closed. A debug APK is not substituted as that production asset.
+GitHub Actions runs core unit tests, web typecheck/tests/build, and Android unit tests before uploading the debug APK artifact. Instrumented Compose UI tests run on an emulator matrix (API 24, 26, 31, 34, 36, and 37). A version tag (`v*`) publishes a **signed release APK only after** the core, web, emulator, and debug jobs pass and every signing secret is present. The release job calls `apksigner` from build-tools 36.0.0 and fails if verification or the 16 KB library check fails. If a signing secret is missing, the release job fails closed. A debug APK is not substituted as that production asset.
 
 Required GitHub Actions secrets for signed releases:
 

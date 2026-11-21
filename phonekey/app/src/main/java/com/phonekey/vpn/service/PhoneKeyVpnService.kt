@@ -2,6 +2,7 @@ package com.phonekey.vpn.service
 
 import android.app.Notification
 import android.app.PendingIntent
+import android.content.Context
 import android.content.Intent
 import android.content.pm.ServiceInfo
 import android.os.Build
@@ -92,7 +93,8 @@ class PhoneKeyVpnService : GoBackend.VpnService() {
             restartOnDestroy = false
             try {
                 val token = armStart()
-                startForegroundService(
+                start(
+                    this,
                     Intent(this, PhoneKeyVpnService::class.java)
                         .putExtra(EXTRA_GENERATION, token),
                 )
@@ -252,7 +254,16 @@ class PhoneKeyVpnService : GoBackend.VpnService() {
             restartOnDestroy = true
         }
 
-        /** Call immediately before [android.content.Context.startForegroundService]. */
+        /** Android 8+ requires startForegroundService. Android 7 only has startService. */
+        fun start(context: Context, intent: Intent) {
+            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
+                context.startForegroundService(intent)
+            } else {
+                context.startService(intent)
+            }
+        }
+
+        /** Call immediately before [start]. */
         fun armStart(): Int {
             val token = generation.incrementAndGet()
             liveGeneration = token
@@ -277,7 +288,7 @@ class PhoneKeyVpnService : GoBackend.VpnService() {
                 val token = armStart()
                 val intent = Intent(context, PhoneKeyVpnService::class.java)
                     .putExtra(EXTRA_GENERATION, token)
-                context.startForegroundService(intent)
+                start(context, intent)
                 awaitReady()
             } catch (_: Exception) {
                 false

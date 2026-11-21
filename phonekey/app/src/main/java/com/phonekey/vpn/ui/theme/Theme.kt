@@ -1,11 +1,14 @@
 package com.phonekey.vpn.ui.theme
 
+import android.os.Build
+import androidx.annotation.RequiresApi
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Typography
 import androidx.compose.material3.darkColorScheme
 import androidx.compose.material3.lightColorScheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.text.ExperimentalTextApi
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.Font
@@ -34,6 +37,7 @@ private val SurfaceLight2 = androidx.compose.ui.graphics.Color(0xFFE7E2D4)
 private val LineLight = androidx.compose.ui.graphics.Color(0xFFD5D0C4)
 private val ClayDeep = androidx.compose.ui.graphics.Color(0xFFA33B24)
 
+@RequiresApi(Build.VERSION_CODES.O)
 @OptIn(ExperimentalTextApi::class)
 private fun variable(res: Int, weight: FontWeight) = Font(
     resId = res,
@@ -41,26 +45,33 @@ private fun variable(res: Int, weight: FontWeight) = Font(
     variationSettings = FontVariation.Settings(FontVariation.weight(weight.weight)),
 )
 
-private val Outfit = FontFamily(
-    variable(R.font.outfit_variable, FontWeight.Normal),
-    variable(R.font.outfit_variable, FontWeight.Medium),
-    variable(R.font.outfit_variable, FontWeight.SemiBold),
-)
+private val Outfit = variableFamily(R.font.outfit_variable)
+private val Fraunces = variableFamily(R.font.fraunces_variable)
 
-private val Fraunces = FontFamily(
-    variable(R.font.fraunces_variable, FontWeight.SemiBold),
-)
+/** Variable fonts and font variations exist on Android 8. Android 7 uses the system fonts. */
+private fun variableFamily(res: Int): FontFamily {
+    if (Build.VERSION.SDK_INT < Build.VERSION_CODES.O) {
+        return if (res == R.font.fraunces_variable) FontFamily.Serif else FontFamily.SansSerif
+    }
+    return FontFamily(
+        variable(res, FontWeight.Normal),
+        variable(res, FontWeight.Medium),
+        variable(res, FontWeight.SemiBold),
+    )
+}
 
-private val PhoneKeyType = Typography(
-    displaySmall = TextStyle(fontFamily = Fraunces, fontWeight = FontWeight.SemiBold, fontSize = 40.sp, lineHeight = 44.sp),
-    headlineMedium = TextStyle(fontFamily = Fraunces, fontWeight = FontWeight.SemiBold, fontSize = 28.sp, lineHeight = 32.sp),
-    titleLarge = TextStyle(fontFamily = Outfit, fontWeight = FontWeight.SemiBold, fontSize = 22.sp, lineHeight = 28.sp),
-    titleMedium = TextStyle(fontFamily = Outfit, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, lineHeight = 22.sp),
-    bodyLarge = TextStyle(fontFamily = Outfit, fontWeight = FontWeight.Normal, fontSize = 16.sp, lineHeight = 24.sp),
-    bodyMedium = TextStyle(fontFamily = Outfit, fontWeight = FontWeight.Normal, fontSize = 14.sp, lineHeight = 20.sp),
-    labelLarge = TextStyle(fontFamily = Outfit, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, lineHeight = 18.sp),
-    labelMedium = TextStyle(fontFamily = Outfit, fontWeight = FontWeight.Medium, fontSize = 12.sp, lineHeight = 16.sp),
-)
+private fun phoneKeyType(): Typography {
+    return Typography(
+        displaySmall = TextStyle(fontFamily = Fraunces, fontWeight = FontWeight.SemiBold, fontSize = 40.sp, lineHeight = 44.sp),
+        headlineMedium = TextStyle(fontFamily = Fraunces, fontWeight = FontWeight.SemiBold, fontSize = 28.sp, lineHeight = 32.sp),
+        titleLarge = TextStyle(fontFamily = Outfit, fontWeight = FontWeight.SemiBold, fontSize = 22.sp, lineHeight = 28.sp),
+        titleMedium = TextStyle(fontFamily = Outfit, fontWeight = FontWeight.SemiBold, fontSize = 16.sp, lineHeight = 22.sp),
+        bodyLarge = TextStyle(fontFamily = Outfit, fontWeight = FontWeight.Normal, fontSize = 16.sp, lineHeight = 24.sp),
+        bodyMedium = TextStyle(fontFamily = Outfit, fontWeight = FontWeight.Normal, fontSize = 14.sp, lineHeight = 20.sp),
+        labelLarge = TextStyle(fontFamily = Outfit, fontWeight = FontWeight.SemiBold, fontSize = 14.sp, lineHeight = 18.sp),
+        labelMedium = TextStyle(fontFamily = Outfit, fontWeight = FontWeight.Medium, fontSize = 12.sp, lineHeight = 16.sp),
+    )
+}
 
 private val DarkColors = darkColorScheme(
     primary = Brass,
@@ -100,9 +111,10 @@ private val LightColors = lightColorScheme(
 
 @Composable
 fun PhoneKeyTheme(content: @Composable () -> Unit) {
+    val type = remember { phoneKeyType() }
     MaterialTheme(
         colorScheme = if (isSystemInDarkTheme()) DarkColors else LightColors,
-        typography = PhoneKeyType,
+        typography = type,
         content = content,
     )
 }

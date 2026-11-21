@@ -31,7 +31,7 @@ class AndroidTunnelRuntime(
             val token = PhoneKeyVpnService.armStart()
             val intent = Intent(context, PhoneKeyVpnService::class.java)
                 .putExtra(PhoneKeyVpnService.EXTRA_GENERATION, token)
-            context.startForegroundService(intent)
+            PhoneKeyVpnService.start(context, intent)
             PhoneKeyVpnService.awaitReady()
         } catch (_: Exception) {
             false

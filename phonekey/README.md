@@ -1,6 +1,6 @@
 # PhoneKey23 for Android
 
-Native Android WireGuard client. Package: `com.phonekey.vpn`. JDK 17, Kotlin, Jetpack Compose, `minSdk 26`, `targetSdk 36`, `compileSdk 36`. Version name 1.1.0.
+Native Android WireGuard client. Package: `com.phonekey.vpn`. JDK 17, Kotlin, Jetpack Compose, `minSdk 24`, `targetSdk 37`, `compileSdk 37`. Version name 1.2.0. Android 7.0 is the oldest installable version because the WireGuard tunnel library requires API 24. Android 17 is API 37.
 
 Project page, which does not itself connect a VPN: [https://tajoor621.github.io/PhoneKey23/](https://tajoor621.github.io/PhoneKey23/). The line on the repository is **Chaabi jo aapko Jorhy Apno sy** — the key that joins you with your own.
 
@@ -59,7 +59,7 @@ Open this `phonekey` directory in Android Studio with JDK 17, or run:
 ./gradlew :app:assembleDebug
 ```
 
-CI runs core unit tests, web checks, Compose instrumented UI tests on an emulator matrix (API 26, 29, 31, 34, 35, 36), and Android unit tests before generating the debug APK artifact. A version tag runs `lintRelease`, `apksigner` from `build-tools/36.0.0`, and `scripts/check-16kb.sh` before publishing. A debug APK is never the production asset.
+CI runs core unit tests, web checks, Compose instrumented UI tests on an emulator matrix (API 24, 26, 31, 34, 36, and 37), and Android unit tests before generating the debug APK artifact. A version tag runs `lintRelease`, `apksigner` from `build-tools/36.0.0`, and `scripts/check-16kb.sh` before publishing. A debug APK is never the production asset.
 
 ## Deep link
 

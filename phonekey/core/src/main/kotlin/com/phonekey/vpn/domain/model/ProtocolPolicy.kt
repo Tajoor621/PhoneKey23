@@ -47,6 +47,47 @@ object ProtocolPolicy {
             (a[0] == 203 && a[1] == 0 && a[2] == 113)
     }
 
+    /**
+     * Android 17 blocks the app's own sockets to these hosts unless
+     * ACCESS_LOCAL_NETWORK was granted. A public address does not need it.
+     */
+    fun needsLocalNetwork(endpoint: String?): Boolean {
+        if (endpoint.isNullOrBlank()) return false
+        val host = hostOf(endpoint).lowercase().trim().removeSuffix(".").substringBefore("%")
+        if (host.isEmpty()) return false
+        if (host == "localhost" || host == "localhost.localdomain" || host == "::1") return true
+        if (host.startsWith("::ffff:")) return ipv4Local(host.substringAfter("::ffff:"))
+        if (host.contains(":")) return ipv6Local(host)
+        if (host.endsWith(".local") || host.endsWith(".lan") || host.endsWith(".home") ||
+            host.endsWith(".internal") || host.endsWith(".localdomain") || !host.contains('.')
+        ) {
+            return true
+        }
+        return ipv4Local(host)
+    }
+
+    private fun ipv4Local(host: String): Boolean {
+        val parts = host.split('.')
+        if (parts.size != 4 || parts.any { it.toIntOrNull() !in 0..255 }) return false
+        val a = parts.map { it.toInt() }
+        return a[0] == 10 ||
+            a[0] == 127 ||
+            (a[0] == 169 && a[1] == 254) ||
+            (a[0] == 192 && a[1] == 168) ||
+            (a[0] == 172 && a[1] in 16..31)
+    }
+
+    /** Unique-local (fc00::/7) and link-local (fe80::/10). */
+    private fun ipv6Local(host: String): Boolean {
+        val bare = host.removePrefix("[").removeSuffix("]")
+        if (bare == "::1") return true
+        if (bare.startsWith("::")) return false
+        val first = bare.substringBefore(":").substringBefore("%").toIntOrNull(16) ?: return false
+        val ula = first and 0xfe00 == 0xfc00
+        val linkLocal = first and 0xffc0 == 0xfe80
+        return ula || linkLocal
+    }
+
     private fun hostOf(endpoint: String): String {
         val trimmed = endpoint.trim()
         if (trimmed.startsWith("[")) {

@@ -224,7 +224,7 @@ function HomeScreen({
         Install Android app
       </a>
       <p className="mt-2 max-w-sm text-center text-xs text-muted">
-        Last published build is 1.0.2, debug-signed. The tunnel starts only after Android’s VPN permission and a real handshake.
+        Last published build is 1.0.2, debug-signed, and needs Android 8.0. Current source is 1.2.0 and installs on Android 7.0 through Android 17. The tunnel starts only after Android’s VPN permission and a real handshake.
       </p>
       <div className="mt-auto w-full pt-8">
         <button type="button" onClick={onChoose} className="w-full rounded-2xl bg-card p-4 text-left">

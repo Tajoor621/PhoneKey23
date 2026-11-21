@@ -37,6 +37,7 @@ import androidx.navigation.compose.rememberNavController
 import com.journeyapps.barcodescanner.ScanContract
 import com.journeyapps.barcodescanner.ScanOptions
 import com.phonekey.vpn.R
+import com.phonekey.vpn.domain.model.ProtocolPolicy
 import com.phonekey.vpn.domain.model.TunnelStatus
 import com.phonekey.vpn.domain.model.VpnProfile
 import com.phonekey.vpn.ui.home.HomeScreen
@@ -82,6 +83,21 @@ fun PhoneKeyRoot(connectTick: Int = 0, vm: PhoneKeyViewModel = viewModel()) {
             else if (pendingConnect) vm.note("VPN permission is required to connect.")
             pendingConnect = false
         }
+        fun continueConnect() {
+            val prepare = VpnService.prepare(context)
+            if (prepare != null) {
+                pendingConnect = true
+                vpnPermission.launch(prepare)
+            } else {
+                vm.connectSelected()
+            }
+        }
+        val localNetwork = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) { granted ->
+            if (!granted && ProtocolPolicy.needsLocalNetwork(selected?.endpoint)) {
+                vm.note("Local network access was denied. A server on this LAN will not complete a handshake. A public endpoint can still connect.")
+            }
+            continueConnect()
+        }
         val openFile = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
             if (uri != null) vm.importUri(uri)
         }
@@ -126,13 +142,16 @@ fun PhoneKeyRoot(connectTick: Int = 0, vm: PhoneKeyViewModel = viewModel()) {
         }
 
         fun connect() {
-            val prepare = VpnService.prepare(context)
-            if (prepare != null) {
-                pendingConnect = true
-                vpnPermission.launch(prepare)
-            } else {
-                vm.connectSelected()
+            if (
+                Build.VERSION.SDK_INT >= 37 &&
+                ProtocolPolicy.needsLocalNetwork(selected?.endpoint) &&
+                ContextCompat.checkSelfPermission(context, Manifest.permission.ACCESS_LOCAL_NETWORK) !=
+                PackageManager.PERMISSION_GRANTED
+            ) {
+                localNetwork.launch(Manifest.permission.ACCESS_LOCAL_NETWORK)
+                return
             }
+            continueConnect()
         }
 
         LaunchedEffect(Unit) {
@@ -145,7 +164,7 @@ fun PhoneKeyRoot(connectTick: Int = 0, vm: PhoneKeyViewModel = viewModel()) {
             if (askedLaunchConnect || !settings.autoConnectOnLaunch || settings.selectedProfileId == null) return@LaunchedEffect
             askedLaunchConnect = true
             if (session.status == TunnelStatus.DISCONNECTED && VpnService.prepare(context) == null) {
-                vm.connectSelected()
+                connect()
             }
         }
         LaunchedEffect(Unit) {

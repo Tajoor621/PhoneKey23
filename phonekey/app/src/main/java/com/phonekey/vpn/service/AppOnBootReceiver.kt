@@ -36,7 +36,7 @@ class AppOnBootReceiver : BroadcastReceiver() {
                     val start = Intent(app, PhoneKeyVpnService::class.java)
                         .putExtra(PhoneKeyVpnService.EXTRA_GENERATION, token)
                         .putExtra(PhoneKeyVpnService.EXTRA_BOOT, true)
-                    app.startForegroundService(start)
+                    PhoneKeyVpnService.start(app, start)
                 } catch (_: Exception) {
                     notifyNeedsTap(app)
                 }

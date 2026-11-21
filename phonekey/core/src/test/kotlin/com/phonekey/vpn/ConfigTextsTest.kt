@@ -67,6 +67,27 @@ class ConfigTextsTest {
     }
 
     @Test
+    fun localNetworkOnlyForPrivateEndpoints() {
+        assertTrue(ProtocolPolicy.needsLocalNetwork("10.1.2.3:51820"))
+        assertTrue(ProtocolPolicy.needsLocalNetwork("172.16.0.1:51820"))
+        assertTrue(ProtocolPolicy.needsLocalNetwork("192.168.1.9:51820"))
+        assertTrue(ProtocolPolicy.needsLocalNetwork("169.254.1.1:51820"))
+        assertTrue(ProtocolPolicy.needsLocalNetwork("127.0.0.1:51820"))
+        assertTrue(ProtocolPolicy.needsLocalNetwork("localhost:51820"))
+        assertTrue(ProtocolPolicy.needsLocalNetwork("wg.internal.lan:51820"))
+        assertTrue(ProtocolPolicy.needsLocalNetwork("printer.local:51820"))
+        assertTrue(ProtocolPolicy.needsLocalNetwork("[fd00::1]:51820"))
+        assertTrue(ProtocolPolicy.needsLocalNetwork("[fe80::1]:51820"))
+        assertTrue(!ProtocolPolicy.needsLocalNetwork("172.15.0.1:51820"))
+        assertTrue(!ProtocolPolicy.needsLocalNetwork("172.32.0.1:51820"))
+        assertTrue(!ProtocolPolicy.needsLocalNetwork("8.8.8.8:51820"))
+        assertTrue(!ProtocolPolicy.needsLocalNetwork("203.0.113.1:51820"))
+        assertTrue(!ProtocolPolicy.needsLocalNetwork("vpn.example.com:51820"))
+        assertTrue(!ProtocolPolicy.needsLocalNetwork("[2001:db8::1]:51820"))
+        assertTrue(!ProtocolPolicy.needsLocalNetwork(null))
+    }
+
+    @Test
     fun refusesXrayJson() {
         val json = """{"outbounds":[{"protocol":"vless"}]}"""
         val error = ConfigTexts.import(json).exceptionOrNull()

@@ -6,14 +6,14 @@ plugins {
 
 android {
     namespace = "com.phonekey.vpn"
-    compileSdk = 36
+    compileSdk = 37
 
     defaultConfig {
         applicationId = "com.phonekey.vpn"
-        minSdk = 26
-        targetSdk = 36
-        versionCode = 4
-        versionName = "1.1.0"
+        minSdk = 24
+        targetSdk = 37
+        versionCode = 5
+        versionName = "1.2.0"
         vectorDrawables { useSupportLibrary = true }
     }
 
@@ -82,9 +82,8 @@ android {
 }
 
 dependencies {
-    // Compose 1.12 (BOM 2026.08 and later) requires compileSdk 37 and AGP 9.
-    // This project stays on AGP 8.13.2 and compileSdk 36. 2026.06.01 is Compose 1.11.4.
-    val composeBom = platform("androidx.compose:compose-bom:2026.06.01")
+    // Compose 1.12 needs compileSdk 37 and AGP 9.1, which this module now uses.
+    val composeBom = platform("androidx.compose:compose-bom:2026.09.00")
     implementation(composeBom)
     androidTestImplementation(composeBom)
 

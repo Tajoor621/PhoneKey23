@@ -21,6 +21,10 @@
     <uses-permission android:name="android.permission.RECEIVE_BOOT_COMPLETED" />
     <uses-permission android:name="android.permission.WAKE_LOCK" />
     <uses-permission android:name="android.permission.CAMERA" />
+    <!-- Android 17. Lets a WireGuard endpoint on the LAN be reached. Ignored before that. -->
+    <uses-permission
+        android:name="android.permission.ACCESS_LOCAL_NETWORK"
+        tools:targetApi="37" />
 
     <application
         android:name=".PhoneKeyApp"
@@ -33,7 +37,7 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.PhoneKey"
-        tools:targetApi="36">
+        tools:targetApi="37">
 
         <activity
             android:name=".MainActivity"
