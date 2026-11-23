@@ -6,23 +6,34 @@ plugins {
 
 // compileSdk 37 looks up platforms/android-37. sdkmanager only publishes
 // platforms;android-37.0. Alias it before the Android plugin resolves the SDK.
-// The new AGP DSL that names minorApiLevel stays off with android.newDsl=false.
 fun linkAndroid37Platform() {
     val sdkRoot = System.getenv("ANDROID_SDK_ROOT")
         ?: System.getenv("ANDROID_HOME")
-        ?: run {
-            val local = rootProject.file("local.properties")
-            if (!local.isFile) return
-            val props = java.util.Properties()
-            local.inputStream().use { props.load(it) }
-            props.getProperty("sdk.dir")?.takeIf { it.isNotBlank() } ?: return
-        }
-    val platforms = java.nio.file.Path.of(sdkRoot, "platforms")
-    val installed = platforms.resolve("android-37.0")
-    val alias = platforms.resolve("android-37")
-    if (java.nio.file.Files.isSymbolicLink(alias) || java.nio.file.Files.isDirectory(alias)) return
-    if (!java.nio.file.Files.isDirectory(installed)) return
-    java.nio.file.Files.createSymbolicLink(alias, java.nio.file.Path.of("android-37.0"))
+        ?: readLocalSdkDir()
+        ?: return
+    val installed = File(sdkRoot, "platforms/android-37.0")
+    val alias = File(sdkRoot, "platforms/android-37")
+    if (alias.exists() || !installed.isDirectory) return
+    val script = rootProject.file("scripts/link-android-37.sh")
+    if (!script.isFile) return
+    val process = ProcessBuilder("sh", script.absolutePath)
+        .redirectErrorStream(true)
+        .apply { environment()["ANDROID_SDK_ROOT"] = sdkRoot }
+        .start()
+    val output = process.inputStream.bufferedReader().readText()
+    if (process.waitFor() != 0) {
+        logger.warn(output.trim())
+    }
+}
+
+fun readLocalSdkDir(): String? {
+    val local = rootProject.file("local.properties")
+    if (!local.isFile) return null
+    val value = local.readLines()
+        .firstOrNull { it.startsWith("sdk.dir=") }
+        ?.substringAfter("sdk.dir=")
+        ?.trim()
+    return value?.ifBlank { null }
 }
 
 linkAndroid37Platform()
