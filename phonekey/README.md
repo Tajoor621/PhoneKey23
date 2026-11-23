@@ -59,7 +59,7 @@ Open this `phonekey` directory in Android Studio with JDK 17, or run:
 ./gradlew :app:assembleDebug
 ```
 
-CI runs core unit tests, web checks, Compose instrumented UI tests on an emulator matrix (API 24, 26, 31, 34, 36, and 37), and Android unit tests before generating the debug APK artifact. A version tag runs `lintRelease`, `apksigner` from `build-tools/36.0.0`, and `scripts/check-16kb.sh` before publishing. A debug APK is never the production asset.
+CI runs core unit tests, web checks, Compose instrumented UI tests on an emulator matrix (API 24, 26, 31, 34, 36, and 37.0), and Android unit tests before generating the debug APK artifact. A version tag runs `lintRelease`, `apksigner` from `build-tools/37.0.0`, and `scripts/check-16kb.sh` before publishing. A debug APK is never the production asset. Android 17’s platform package is `platforms;android-37.0`. `compileSdk 37` looks up `platforms/android-37`, so the build aliases that name to `android-37.0`.
 
 ## Deep link
 

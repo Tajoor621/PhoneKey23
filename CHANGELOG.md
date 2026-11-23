@@ -6,7 +6,7 @@ Runs on Android 7.0 (API 24) through Android 17 (API 37). WireGuard tunnel 1.0.2
 
 - `minSdk` is 24. Android 7 has no `startForegroundService`, so the VPN service is started with `startService` there and with `startForegroundService` on Android 8 and newer.
 - Android 7 does not load the variable font files. Those need Android 8, so Android 7 uses the system serif and sans fonts. Launcher icons also have a non-adaptive fallback, because Android 7 cannot resolve the adaptive icon.
-- `compileSdk` and `targetSdk` are 37. Toolchain: Android Gradle Plugin 9.1.1, Gradle 9.3.1, Kotlin 2.2.21, Compose BOM 2026.09.00. Built-in Kotlin and the new AGP DSL stay off so the existing Kotlin plugin still applies.
+- `compileSdk` and `targetSdk` are 37. Toolchain: Android Gradle Plugin 9.1.1, Gradle 9.3.1, Kotlin 2.2.21, Compose BOM 2026.09.00. Built-in Kotlin and the new AGP DSL stay off so the existing Kotlin plugin still applies. The SDK package is `platforms;android-37.0` (there is no `platforms;android-37`); the build aliases `platforms/android-37` to that directory so `compileSdk 37` can find it. Build tools are 37.0.0. Emulator checks cover API 24 and API 37.0.
 - On Android 17 the app asks for local-network access only when the selected endpoint is on the LAN, link-local, or a local name. A public endpoint does not show that prompt. Denying it still allows a public endpoint, and tells you a LAN server will not handshake.
 
 ## 1.1.0
