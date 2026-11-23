@@ -78,6 +78,8 @@ android {
     }
 
     compileOptions {
+        // java.util.Base64 is API 26. minSdk is 24, so the JDK method is desugared.
+        isCoreLibraryDesugaringEnabled = true
         sourceCompatibility = JavaVersion.VERSION_17
         targetCompatibility = JavaVersion.VERSION_17
     }
@@ -140,12 +142,15 @@ dependencies {
     implementation("com.wireguard.android:tunnel:1.0.20260102")
     implementation("com.journeyapps:zxing-android-embedded:4.3.0")
     implementation("com.google.code.gson:gson:2.11.0")
+    coreLibraryDesugaring("com.android.tools:desugar_jdk_libs:2.1.5")
 
     debugImplementation("androidx.compose.ui:ui-tooling")
     debugImplementation("androidx.compose.ui:ui-test-manifest")
 
     testImplementation("junit:junit:4.13.2")
     androidTestImplementation("androidx.test.ext:junit:1.2.1")
-    androidTestImplementation("androidx.test.espresso:espresso-core:3.6.1")
+    // Compose ui-test still pulls Espresso 3.5, which calls InputManager.getInstance.
+    // That method is gone on Android 17. 3.7.0 is the first release that does not.
+    androidTestImplementation("androidx.test.espresso:espresso-core:3.7.0")
     androidTestImplementation("androidx.compose.ui:ui-test-junit4")
 }
