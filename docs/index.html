@@ -37,7 +37,7 @@
     "alternateName": ["PhoneKey", "Chaabi jo aapko Jorhy Apno sy"],
     "applicationCategory": "SecurityApplication",
     "operatingSystem": "Android 7.0 through Android 17",
-    "softwareVersion": "1.0.2",
+    "softwareVersion": "1.2.0",
     "license": "https://www.apache.org/licenses/LICENSE-2.0",
     "isAccessibleForFree": true,
     "offers": {
@@ -45,7 +45,7 @@
       "price": "0",
       "priceCurrency": "USD"
     },
-    "downloadUrl": "https://github.com/Tajoor621/PhoneKey23/releases/tag/v1.0.2",
+    "downloadUrl": "https://github.com/Tajoor621/PhoneKey23/releases/download/v1.2.0/app-debug.apk",
     "codeRepository": "https://github.com/Tajoor621/PhoneKey23",
     "url": "https://tajoor621.github.io/PhoneKey23/",
     "description": "Native Android WireGuard VPN client. The website is a project and download page and does not connect a VPN. No ads, subscription, account, or tracking. You bring your own server.",
@@ -96,7 +96,7 @@
             <p>It is a project and download page. Nothing here can change your IP address, route traffic, or start Android’s VPN service. A tunnel starts only in the installed app, after you import a real WireGuard profile and approve the system VPN prompt. PhoneKey23 does not ship a server.</p>
           </aside>
           <div class="actions">
-            <a class="button" href="https://github.com/Tajoor621/PhoneKey23/releases/tag/v1.0.2">Download the APK</a>
+            <a class="button" href="https://github.com/Tajoor621/PhoneKey23/releases/download/v1.2.0/app-debug.apk">Download the APK</a>
             <a class="button secondary" href="https://github.com/Tajoor621/PhoneKey23">View the source</a>
           </div>
         </div>
@@ -139,7 +139,7 @@
           <p>The app is the client. The server is yours. Without a working WireGuard endpoint and a valid peer, PhoneKey23 has nothing to connect to.</p>
         </div>
         <ol class="steps">
-          <li><b>01</b><div><strong>Install the Android APK.</strong> Release <a href="https://github.com/Tajoor621/PhoneKey23/releases/tag/v1.0.2">v1.0.2</a> attaches <a href="https://github.com/Tajoor621/PhoneKey23/releases/download/v1.0.2/app-debug.apk"><code>app-debug.apk</code></a>, a debug-signed build for installation and testing. That build’s minimum is Android 8.0. Source 1.2.0 is what installs on Android 7.0, and it is not attached to the v1.0.2 release. It is not a Play Store package. A signed <code>PhoneKey23-release.apk</code> is published only when the release signing secrets are configured.</div></li>
+          <li><b>01</b><div><strong>Install the Android APK.</strong> <a href="https://github.com/Tajoor621/PhoneKey23/releases/tag/v1.2.0">Release 1.2.0</a> attaches <a href="https://github.com/Tajoor621/PhoneKey23/releases/download/v1.2.0/app-debug.apk"><code>app-debug.apk</code></a>, a debug-signed test build for Android 7.0 through Android 17. It is not a Play Store package and it is not the signed production file. A signed <code>PhoneKey23-release.apk</code> is published only when the release signing secrets are configured. The older <a href="https://github.com/Tajoor621/PhoneKey23/releases/tag/v1.0.2">v1.0.2</a> file needs Android 8.0 and uses a different debug certificate, so it will not update in place.</div></li>
           <li><b>02</b><div><strong>Bring a real WireGuard profile.</strong> Get a <code>.conf</code> from your own server or from a provider that gives you WireGuard, not from this project. Placeholder hosts such as <code>example.com</code> and documentation addresses are rejected.</div></li>
           <li><b>03</b><div><strong>Import it on the phone.</strong> Use the file picker, scan the profile QR code, or type the keys into the form. Then pick that profile.</div></li>
           <li><b>04</b><div><strong>Approve Android’s VPN prompt and connect.</strong> The app reports connected only after a WireGuard peer handshake. If none arrives within 25 seconds, it stays disconnected and tells you to check the endpoint, keys, UDP port, and server.</div></li>
@@ -148,7 +148,7 @@
           <legend>Checklist on this browser</legend>
           <p class="check-note" id="check-note">Ticks stay in this browser’s local storage. They are not uploaded, and they do not start a tunnel.</p>
           <ul>
-            <li><label><input type="checkbox" data-check="android" aria-describedby="check-note" /> <span>The phone is Android 7.0 through Android 17 for a 1.2.0 build. The published v1.0.2 APK needs Android 8.0.</span></label></li>
+            <li><label><input type="checkbox" data-check="android" aria-describedby="check-note" /> <span>The phone is Android 7.0 through Android 17. The 1.2.0 test APK installs on that range. The older v1.0.2 file needs Android 8.0.</span></label></li>
             <li><label><input type="checkbox" data-check="apk" /> <span>I downloaded the APK from GitHub Releases, not from an unknown mirror.</span></label></li>
             <li><label><input type="checkbox" data-check="server" /> <span>I already have a WireGuard server and a client profile that names a real endpoint.</span></label></li>
             <li><label><input type="checkbox" data-check="backup" /> <span>I have a safe backup of that profile before I reinstall or change signing keys.</span></label></li>
@@ -240,8 +240,8 @@
         </div>
         <ul class="limits">
           <li class="limit">
-            <h3>v1.0.2 is debug-signed</h3>
-            <p>The file on that release is <code>app-debug.apk</code>. A later <code>PhoneKey23-release.apk</code> uses a different certificate unless you built both with the same keystore. Android will refuse that update. Uninstalling, or clearing app data, can make Keystore-encrypted profiles unrecoverable. Export a copy to a place you control first.</p>
+            <h3>1.2.0 is debug-signed</h3>
+            <p>The file on that release is <code>app-debug.apk</code>. It is not <code>PhoneKey23-release.apk</code>. A later signed file uses a different certificate unless both were built with the same keystore. Android will refuse that update, including an update over the v1.0.2 debug build. Uninstalling, or clearing app data, can make Keystore-encrypted profiles unrecoverable. Export a copy to a place you control first.</p>
           </li>
           <li class="limit">
             <h3>Permissions, and why they exist</h3>
@@ -280,7 +280,7 @@
           </li>
           <li class="limit">
             <h3>The browser companion is not a VPN</h3>
-            <p>The repository also contains a browser profile screen for trying the import UI. Any speeds shown there are simulated. That screen cannot create an Android <code>VpnService</code> or route device traffic.</p>
+            <p>The repository also contains a browser screen for importing and checking a WireGuard config. That screen does not connect, and it does not invent a handshake or traffic numbers. It cannot create an Android <code>VpnService</code> or route device traffic.</p>
           </li>
         </ul>
 
@@ -302,7 +302,7 @@
           </details>
           <details>
             <summary>Which Android versions are supported?</summary>
-            <p>Source version 1.2.0 runs on Android 7.0 (API 24) through Android 17 (API 37). The WireGuard library cannot install on anything older than Android 7.0. The published test APK is v1.0.2, and that file’s minimum is Android 8.0. A 1.2.0 APK is not a GitHub Release until a version tag is published. The package id is <code>com.phonekey.vpn</code>. The installed app opens from <code>phonekey://activate</code> only. This site is not a verified Android App Link.</p>
+            <p>Version 1.2.0 runs on Android 7.0 (API 24) through Android 17 (API 37). The WireGuard library cannot install on anything older than Android 7.0. The test APK on release 1.2.0 is that build. It is debug-signed. The older v1.0.2 file needs Android 8.0. The package id is <code>com.phonekey.vpn</code>. The installed app opens from <code>phonekey://activate</code> only. This site is not a verified Android App Link.</p>
           </details>
         </div>
       </div>

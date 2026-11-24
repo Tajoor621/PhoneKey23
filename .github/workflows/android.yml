@@ -138,6 +138,7 @@ jobs:
           java-version: "17"
           cache: gradle
       - name: Require signing secrets
+        id: signing
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
           KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
@@ -145,13 +146,16 @@ jobs:
           KEY_PASSWORD: ${{ secrets.KEY_PASSWORD }}
         run: |
           set -euo pipefail
+          ready=true
           for name in KEYSTORE_BASE64 KEYSTORE_PASSWORD KEY_ALIAS KEY_PASSWORD; do
             if [ -z "${!name:-}" ]; then
-              echo "::error::Missing required GitHub Actions secret: $name"
-              exit 1
+              echo "::notice::Signing secret $name is not set. The signed release APK will not be published."
+              ready=false
             fi
           done
+          echo "ready=$ready" >> "$GITHUB_OUTPUT"
       - name: Install Android SDK
+        if: steps.signing.outputs.ready == 'true'
         run: |
           set -euo pipefail
           SDK_ROOT="${ANDROID_SDK_ROOT:-${ANDROID_HOME:-/usr/local/lib/android/sdk}}"
@@ -163,6 +167,7 @@ jobs:
           "$SDKMANAGER" "$ANDROID_PLATFORM" "$ANDROID_BUILD_TOOLS"
           ANDROID_SDK_ROOT="$SDK_ROOT" sh phonekey/scripts/link-android-37.sh
       - name: Lint release, build, and verify signed release APK
+        if: steps.signing.outputs.ready == 'true'
         working-directory: phonekey
         env:
           KEYSTORE_BASE64: ${{ secrets.KEYSTORE_BASE64 }}
@@ -183,11 +188,13 @@ jobs:
           mkdir -p ../release-assets
           cp "$APK" ../release-assets/PhoneKey23-release.apk
       - name: Package source and checksums
+        if: steps.signing.outputs.ready == 'true'
         run: |
           set -euo pipefail
           zip -r PhoneKey23-source.zip phonekey -x 'phonekey/**/build/*' 'phonekey/.gradle/*' 'phonekey/**/.gradle/*'
           sha256sum release-assets/PhoneKey23-release.apk PhoneKey23-source.zip > SHA256SUMS.txt
       - name: Publish GitHub release
+        if: steps.signing.outputs.ready == 'true'
         uses: softprops/action-gh-release@v2
         with:
           files: |

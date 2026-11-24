@@ -43,9 +43,9 @@ Technical layout, permissions, and the kill-switch limit are also written in [ph
 
 ## Download and install
 
-1. Open [GitHub Releases](https://github.com/Tajoor621/PhoneKey23/releases).
-2. The current source version is 1.2.0. The published tag [v1.0.2](https://github.com/Tajoor621/PhoneKey23/releases/tag/v1.0.2) is the last GitHub release. It attaches `app-debug.apk` (debug-signed, `minSdk` 26) and `phonekey-source.zip`. That APK installs on Android 8.0 or newer, not on Android 7. A signed `PhoneKey23-release.apk` is published only when the release signing secrets are present. This repository does not upload a debug APK as that production asset.
-3. A 1.2.0 build installs on Android 7.0 through Android 17. Android accepts an update only when the package id and signing certificate both match. A later release-signed APK will not install over the v1.0.2 debug build. Do not uninstall or clear app data until you have exported your profiles: Keystore-encrypted data can become unrecoverable.
+1. Open [release 1.2.0](https://github.com/Tajoor621/PhoneKey23/releases/tag/v1.2.0).
+2. Download `app-debug.apk`. It is a debug-signed test build of version 1.2.0, `minSdk` 24, and it installs on Android 7.0 through Android 17. It is not the signed production file. A signed `PhoneKey23-release.apk` is published only when the release signing secrets are present.
+3. This file will not install over the [v1.0.2](https://github.com/Tajoor621/PhoneKey23/releases/tag/v1.0.2) debug build when the certificates differ. Export profiles before uninstalling. Keystore-encrypted data can become unrecoverable.
 4. Open PhoneKey, import a valid WireGuard `.conf` or scan its QR code, approve the VPN permission, and connect. “Connected” means a peer handshake was confirmed. If none arrives within 25 seconds, the app stays disconnected.
 
 ## Build Android locally

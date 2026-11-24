@@ -217,14 +217,14 @@ function HomeScreen({
         </p>
       )}
       <a
-        href="https://github.com/Tajoor621/PhoneKey23/releases/download/v1.0.2/app-debug.apk"
+        href="https://github.com/Tajoor621/PhoneKey23/releases/download/v1.2.0/app-debug.apk"
         className="mt-5 flex h-12 w-full max-w-sm items-center justify-center gap-2 rounded-2xl bg-brass font-semibold text-brass-ink"
       >
         <Download className="size-5" aria-hidden="true" />
         Install Android app
       </a>
       <p className="mt-2 max-w-sm text-center text-xs text-muted">
-        Last published build is 1.0.2, debug-signed, and needs Android 8.0. Current source is 1.2.0 and installs on Android 7.0 through Android 17. The tunnel starts only after Android’s VPN permission and a real handshake.
+        Test build 1.2.0, debug-signed. It installs on Android 7.0 through Android 17. It will not replace an older install if the certificate differs, so export profiles first. The tunnel starts only after Android’s VPN permission and a real handshake.
       </p>
       <div className="mt-auto w-full pt-8">
         <button type="button" onClick={onChoose} className="w-full rounded-2xl bg-card p-4 text-left">
@@ -548,11 +548,11 @@ function SettingsScreen({ settings }: { settings: AppSettings }) {
         PhoneKey is free. No ads. No subscriptions. No accounts. No analytics. WireGuard is the only working protocol. Xray and SSTP are not implemented.
       </p>
       <a
-        href="https://github.com/Tajoor621/PhoneKey23/releases/download/v1.0.2/phonekey-source.zip"
+        href="https://github.com/Tajoor621/PhoneKey23/archive/refs/tags/v1.2.0.zip"
         className="mt-4 flex h-12 items-center justify-center gap-2 rounded-2xl border border-line font-semibold"
       >
         <Download className="size-5" aria-hidden="true" />
-        Source archive (v1.0.2)
+        Source archive (v1.2.0)
       </a>
       <a
         href="https://github.com/Tajoor621/PhoneKey23/releases/latest"

@@ -9,6 +9,7 @@ Runs on Android 7.0 (API 24) through Android 17 (API 37). WireGuard tunnel 1.0.2
 - `compileSdk` and `targetSdk` are 37. Toolchain: Android Gradle Plugin 9.1.1, Gradle 9.3.1, Kotlin 2.2.21, Compose BOM 2026.09.00. Built-in Kotlin and the new AGP DSL stay off so the existing Kotlin plugin still applies. The SDK package is `platforms;android-37.0` (there is no `platforms;android-37`); the build aliases `platforms/android-37` to that directory so `compileSdk 37` can find it. Build tools are 37.0.0. Emulator checks cover API 24 and API 37.0.
 - On Android 17 the app asks for local-network access only when the selected endpoint is on the LAN, link-local, or a local name. A public endpoint does not show that prompt. Denying it still allows a public endpoint, and tells you a LAN server will not handshake.
 - Profile sealing and WireGuard key checks use `java.util.Base64`, which Android 7 does not have. Core library desugaring supplies it. Instrumented UI tests use Espresso 3.7.0 because Android 17 removed `InputManager.getInstance`.
+- Release 1.2.0 attaches `app-debug.apk`, the debug-signed test build for Android 7.0 through Android 17. It is not the signed production APK.
 
 ## 1.1.0
 
