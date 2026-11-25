@@ -10,6 +10,7 @@ Runs on Android 7.0 (API 24) through Android 17 (API 37). WireGuard tunnel 1.0.2
 - On Android 17 the app asks for local-network access only when the selected endpoint is on the LAN, link-local, or a local name. A public endpoint does not show that prompt. Denying it still allows a public endpoint, and tells you a LAN server will not handshake.
 - Profile sealing and WireGuard key checks use `java.util.Base64`, which Android 7 does not have. Core library desugaring supplies it. Instrumented UI tests use Espresso 3.7.0 because Android 17 removed `InputManager.getInstance`.
 - Release 1.2.0 attaches `app-debug.apk`, the debug-signed test build for Android 7.0 through Android 17. It is not the signed production APK.
+- Disconnect and VPN revoke now cancel a delayed reconnect before it can open a second WireGuard tunnel. The stop is recorded before the teardown coroutine starts, so a sleeper that wakes afterwards does not call connect.
 
 ## 1.1.0
 

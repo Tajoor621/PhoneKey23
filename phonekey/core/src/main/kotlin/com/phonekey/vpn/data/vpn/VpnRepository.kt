@@ -26,6 +26,7 @@ import kotlinx.coroutines.launch
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withTimeoutOrNull
+import java.util.concurrent.atomic.AtomicInteger
 
 /**
  * See [TunnelMachine] for states and transitions.
@@ -49,6 +50,7 @@ class VpnRepository(
 ) {
     private val gate = Mutex()
     private val machine = TunnelMachine()
+    private val stops = AtomicInteger()
     private val _session = MutableStateFlow(Session())
     val session: StateFlow<Session> = _session.asStateFlow()
 
@@ -69,6 +71,9 @@ class VpnRepository(
     }
 
     fun disconnect() {
+        // Bump before the coroutine starts. A reconnect sleeping on another
+        // thread must see this when it wakes, or it opens a second tunnel.
+        stops.incrementAndGet()
         scope.launch { disconnectAwait() }
     }
 
@@ -91,6 +96,7 @@ class VpnRepository(
     }
 
     fun onVpnRevoked() {
+        stops.incrementAndGet()
         scope.launch {
             val engine = gate.withLock {
                 machine.onRevoked()
@@ -151,6 +157,7 @@ class VpnRepository(
         serviceAlreadyUp: Boolean,
         expectedGeneration: Int?,
     ) {
+        val stopToken = stops.get()
         val id = profileId ?: settings.snapshot().selectedProfileId
         if (id == null) {
             gate.withLock {
@@ -177,6 +184,7 @@ class VpnRepository(
         }
         if (profile.protocol == Protocol.WIREGUARD) launchProbe(profile)
         val generation = gate.withLock {
+            if (stopped(stopToken)) return@withLock null
             if (expectedGeneration != null && !machine.isCurrent(expectedGeneration)) return@withLock null
             when (val begin = machine.beginConnect(profile, resetAttempts = expectedGeneration == null)) {
                 is TunnelMachine.Begin.AlreadyActive -> null
@@ -198,7 +206,7 @@ class VpnRepository(
                     if (serviceAlreadyUp) "Always-on VPN service was not ready." else "VPN service did not start.",
                 )
             }
-            if (!machine.isCurrent(generation)) return
+            if (stopped(stopToken) || !machine.isCurrent(generation)) return
             runtime.releaseBlackhole()
             val prefs = settings.snapshot()
             engine = runtime.engine(profile.protocol)
@@ -217,7 +225,7 @@ class VpnRepository(
                 }
             }
             val ok = engine.awaitConnection(TunnelLimits.HANDSHAKE_TIMEOUT_MS)
-            if (!machine.isCurrent(generation)) {
+            if (stopped(stopToken) || !machine.isCurrent(generation)) {
                 runCatching { engine.disconnect() }
                 if (activeEngine === engine) activeEngine = null
                 return
@@ -279,7 +287,9 @@ class VpnRepository(
                 runtime.stopService()
             }
             if (followup?.reconnect == true) {
+                val retryToken = stops.get()
                 sleeper(followup.delayMs)
+                if (stopped(retryToken)) return
                 connectAwait(followup.profileId, serviceAlreadyUp = false, expectedGeneration = followup.generation)
             }
         } finally {
@@ -349,9 +359,13 @@ class VpnRepository(
             runtime.stopService()
         }
         if (!plan.decision.reconnect) return
+        val stopToken = stops.get()
         sleeper(plan.decision.delayMs)
+        if (stopped(stopToken)) return
         connectAwait(plan.decision.profileId, serviceAlreadyUp = false, expectedGeneration = plan.decision.generation)
     }
+
+    private fun stopped(token: Int): Boolean = stops.get() != token
 
     private suspend fun disconnectAwait() {
         val engine = gate.withLock {
